@@ -275,8 +275,16 @@ PrefabInstance:
       value: "AI_\uACBD\uAE30\uD310"
       objectReference: {fileID: 0}
     - target: {fileID: 2084041476671128021, guid: a13446a2ec59d07419a82cd6f57afed1, type: 3}
+      propertyPath: m_SortingLayer
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2084041476671128021, guid: a13446a2ec59d07419a82cd6f57afed1, type: 3}
       propertyPath: m_SortingOrder
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2084041476671128021, guid: a13446a2ec59d07419a82cd6f57afed1, type: 3}
+      propertyPath: m_SortingLayerID
+      value: 1480985091
       objectReference: {fileID: 0}
     - target: {fileID: 2084041476671128022, guid: a13446a2ec59d07419a82cd6f57afed1, type: 3}
       propertyPath: m_RootOrder
