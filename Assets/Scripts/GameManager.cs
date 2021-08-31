@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using UnityEngine;
 
 
-// 유닛 리스트의 유닛 순서는 공개0, 공개1, 비공개0 순서로 함.
+// 유닛 리스트의 유닛 순서는 공개0, 공개1, 공개2, 비공개0 순서로 함.
 
 public class GameManager : MonoBehaviour
 {
@@ -101,12 +101,14 @@ public class GameManager : MonoBehaviour
         pUnits.Add(Instantiate(po_tp, new Vector3(0, 2, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka_tp, new Vector3(width - 1, height - 3, 0), Quaternion.identity));
         // Draw Initial Area
-        for (int x = 0; x < 6; x++)
+        for (int x = 0; x < 4; x++)
         {
-            for (int y = 0; y < 4; y++)
+            for (int y = 0; y < 3; y++)
             {
                 kArea.Add(Instantiate(ka_ar, new Vector3(width - 1 - x, height - 1 - y, 0), Quaternion.identity));
+                kField.Add((x, y));
                 pArea.Add(Instantiate(po_ar, new Vector3(x, y, 0), Quaternion.identity));
+                pField.Add((x, y));
             }
         }
         Time.fixedDeltaTime = 0.005f;
@@ -124,19 +126,14 @@ public class GameManager : MonoBehaviour
         turncount++;
         // Client에게 좌표 받고 Unit 이동
         {
-            bool[] isKaCommanded = new bool[3] { false, false, false };
-            bool[] isPoCommanded = new bool[3] { false, false, false };
-            while(CommandQueue.Count > 0)
+            bool[] isKaCommanded = new bool[4] { false, false, false, false };
+            bool[] isPoCommanded = new bool[4] { false, false, false, false };
+            while (CommandQueue.Count > 0)
             {
                 Command Cur_Com;
                 CommandQueue.TryDequeue(out Cur_Com);
                 Debug.Log("대기중인 명령 수 : " + CommandQueue.Count);
                 GameObject piece;
-                if (Cur_Com.pieceNum > 3)
-                {
-                    Debug.Log(Cur_Com.isPo?"포스텍":"카이스트" + " 말의 번호가 지나치게 큼: " + Cur_Com.pieceNum);
-                    continue;
-                }
                 if (Cur_Com.isPo)
                 {
                     if (isPoCommanded[Cur_Com.pieceNum])
@@ -199,17 +196,9 @@ public class GameManager : MonoBehaviour
                         piece.transform.Translate(direction);
                         if (piece.transform.position != pos)
                         {
-                            GameObject ln;
-                            if (Cur_Com.isPo)
-                            {
-                                ln = Instantiate(po_ln, pos, Quaternion.identity);
-                            }
-                            else
-                            {
-                                ln = Instantiate(ka_ln, pos, Quaternion.identity);
-                            }
-                            ln.GetComponent<Line>().owner = piece;
-                            piece.GetComponent<Unit>().line.Add(ln);
+                            GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
+                            ln.GetComponent<Line>().owner = pUnits[0];
+                            pUnits[0].GetComponent<Unit>().line.Add(ln);
                         }
                         break;
                     case Command.CommandType.Respawn:
@@ -294,6 +283,7 @@ public class GameManager : MonoBehaviour
                             foreach (var line in pUnits[i].GetComponent<Unit>().line)
                             {
                                 pArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
+                                pField.Add(((int)line.transform.position.x, (int)line.transform.position.y));
                                 Destroy(line);
                             }
                             if (pUnits[i].GetComponent<Unit>().line.Count > 0)
@@ -440,7 +430,7 @@ public class GameManager : MonoBehaviour
             pUnits[0].transform.Translate(-1, 0, 0);
         if (Input.GetKeyDown(KeyCode.RightArrow))
             pUnits[0].transform.Translate(1, 0, 0);
-        if (Input.anyKeyDown)
+        if (Input.anyKeyDown && Physics.OverlapBox(pos, new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity).Length == 1)
         {
             GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
             ln.GetComponent<Line>().owner = pUnits[0];
