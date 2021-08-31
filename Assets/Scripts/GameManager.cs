@@ -124,14 +124,19 @@ public class GameManager : MonoBehaviour
         turncount++;
         // Client에게 좌표 받고 Unit 이동
         {
-            bool[] isKaCommanded = new bool[4] { false, false, false, false };
-            bool[] isPoCommanded = new bool[4] { false, false, false, false };
-            while (CommandQueue.Count > 0)
+            bool[] isKaCommanded = new bool[4] { false, false, false };
+            bool[] isPoCommanded = new bool[4] { false, false, false };
+            while(CommandQueue.Count > 0)
             {
                 Command Cur_Com;
                 CommandQueue.TryDequeue(out Cur_Com);
                 Debug.Log("대기중인 명령 수 : " + CommandQueue.Count);
                 GameObject piece;
+                if (Cur_Com.pieceNum > 3)
+                {
+                    Debug.Log(Cur_Com.isPo?"포스텍":"카이스트" + " 말의 번호가 지나치게 큼: " + Cur_Com.pieceNum);
+                    continue;
+                }
                 if (Cur_Com.isPo)
                 {
                     if (isPoCommanded[Cur_Com.pieceNum])
@@ -194,9 +199,17 @@ public class GameManager : MonoBehaviour
                         piece.transform.Translate(direction);
                         if (piece.transform.position != pos)
                         {
-                            GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
-                            ln.GetComponent<Line>().owner = pUnits[0];
-                            pUnits[0].GetComponent<Unit>().line.Add(ln);
+                            GameObject ln;
+                            if (Cur_Com.isPo)
+                            {
+                                ln = Instantiate(po_ln, pos, Quaternion.identity);
+                            }
+                            else
+                            {
+                                ln = Instantiate(ka_ln, pos, Quaternion.identity);
+                            }
+                            ln.GetComponent<Line>().owner = piece;
+                            piece.GetComponent<Unit>().line.Add(ln);
                         }
                         break;
                     case Command.CommandType.Respawn:
