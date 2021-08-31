@@ -21,7 +21,7 @@ public class GameManager : MonoBehaviour
     public class Command
     {
         public enum CommandType { Move, Respawn, Wait };
-        public enum Direction { NONE = -1, UP, DOWN, LEFT, RIGHT};
+        public enum Direction { NONE = -1, UP, DOWN, LEFT, RIGHT };
 
         public bool isPo { get; private set; } //팀
         public int pieceNum { get; private set; }
@@ -71,8 +71,16 @@ public class GameManager : MonoBehaviour
     private List<GameObject> pUnits = new List<GameObject>();
     private List<GameObject> kArea = new List<GameObject>();
     private List<GameObject> pArea = new List<GameObject>();
+    private int kStocks;
+    private int pStocks;
+    private bool kWin;
+    private bool pWin;
 
-    public HashSet<GameObject> killList = new HashSet<GameObject>();
+    private HashSet<GameObject> killList = new HashSet<GameObject>();
+    private HashSet<(int x, int y)> wholeField = new HashSet<(int, int)>();
+    private HashSet<(int x, int y)> kField = new HashSet<(int, int)>();
+    private HashSet<(int x, int y)> pField = new HashSet<(int, int)>();
+    private HashSet<(int x, int y)> floodField = new HashSet<(int, int)>();
 
     void Awake()
     {
@@ -83,6 +91,8 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         turncount = 0;
+        kStocks = 4;
+        pStocks = 4;
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         pUnits.Add(Instantiate(po, new Vector3(0, 0, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 1, 0), Quaternion.identity));
@@ -91,8 +101,10 @@ public class GameManager : MonoBehaviour
         pUnits.Add(Instantiate(po_tp, new Vector3(0, 2, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka_tp, new Vector3(width - 1, height - 3, 0), Quaternion.identity));
         // Draw Initial Area
-        for (int x = 0; x < 6; x++){
-            for (int y = 0; y < 4; y ++){
+        for (int x = 0; x < 6; x++)
+        {
+            for (int y = 0; y < 4; y++)
+            {
                 kArea.Add(Instantiate(ka_ar, new Vector3(width - 1 - x, height - 1 - y, 0), Quaternion.identity));
                 pArea.Add(Instantiate(po_ar, new Vector3(x, y, 0), Quaternion.identity));
             }
@@ -114,7 +126,7 @@ public class GameManager : MonoBehaviour
         {
             bool[] isKaCommanded = new bool[4] { false, false, false, false };
             bool[] isPoCommanded = new bool[4] { false, false, false, false };
-            while(CommandQueue.Count > 0)
+            while (CommandQueue.Count > 0)
             {
                 Command Cur_Com;
                 CommandQueue.TryDequeue(out Cur_Com);
@@ -180,7 +192,7 @@ public class GameManager : MonoBehaviour
                                 break;
                         }
                         piece.transform.Translate(direction);
-                        if(piece.transform.position != pos)
+                        if (piece.transform.position != pos)
                         {
                             GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
                             ln.GetComponent<Line>().owner = pUnits[0];
@@ -192,17 +204,18 @@ public class GameManager : MonoBehaviour
                         {
                             Debug.Log(String.Format("{0} 생존한 말을 부활하려고 시도함", Cur_Com.isPo ? "포스텍이" : "카이스트가"));
                         }
+                        if (Cur_Com.isPo ? pStocks : kStocks < 1) break;
                         Debug.Log("부활 명령:" + Cur_Com.pos);
                         bool isinArea = false;
                         Collider2D[] inPosition = Physics2D.OverlapCircleAll(Cur_Com.pos, 0.2f);
-                        foreach(Collider2D obj in inPosition)
+                        foreach (Collider2D obj in inPosition)
                         {
-                            if (obj.gameObject.GetComponent<Area>() != null) 
+                            if (obj.gameObject.GetComponent<Area>() != null)
                             {
                                 isinArea = (obj.gameObject.GetComponent<Area>().isPo == Cur_Com.isPo);
                             }
                         }
-                        if (!isinArea) break; 
+                        if (!isinArea) break;
                         piece.transform.position = Cur_Com.pos;
                         piece.SetActive(true);
                         break;
@@ -218,34 +231,34 @@ public class GameManager : MonoBehaviour
         //
         // for (int i = 0; i < pUnits[i].GetComponent<Unit>().line.Count; i++)
         // {
-            // 움직일 때마다 선 그리기 (Line object 생성)
-            
-            // pLines[i].Add(Instantiate(po_ln, pUnits[i].transform.position, pUnits[i].transform.rotation));
+        // 움직일 때마다 선 그리기 (Line object 생성)
 
-            // xMove = positions[i].x -  pUnits[i].x;
-            // yMove = positions[i].y -  pUnits[i].y;
+        // pLines[i].Add(Instantiate(po_ln, pUnits[i].transform.position, pUnits[i].transform.rotation));
 
-            // if (positions[i].x < 0 || positions[i].x >= 180 || positions[i].y < 0 || positions[i].y >= 120)
-            // {
-            //     Debug.Log("Wrong Input");
-            //     continue;
-            // }
-            // if (Math.Abs(xMove) + Math.Abs(yMove) == 1)
-            // {
-            //     pUnits[i] = (positions[i].x, positions[i].y);
-            // }
-            // else
-            // {
-            //     Debug.Log("Wrong ")
-            // }
+        // xMove = positions[i].x -  pUnits[i].x;
+        // yMove = positions[i].y -  pUnits[i].y;
 
-            
+        // if (positions[i].x < 0 || positions[i].x >= 180 || positions[i].y < 0 || positions[i].y >= 120)
+        // {
+        //     Debug.Log("Wrong Input");
+        //     continue;
+        // }
+        // if (Math.Abs(xMove) + Math.Abs(yMove) == 1)
+        // {
+        //     pUnits[i] = (positions[i].x, positions[i].y);
+        // }
+        // else
+        // {
+        //     Debug.Log("Wrong ")
+        // }
+
+
         // }
 
 
 
         // 충돌 판정 => Kill (한번 업데이트할 때마다!!)
-            // 충돌 이후 영역 계산해서 색칠하기(Area)/점수 계산(UI)
+        // 충돌 이후 영역 계산해서 색칠하기(Area)/점수 계산(UI)
         for (int i = 0; i < pUnits.Count; i++)
         {
             if (pUnits[i].GetComponent<Unit>().isTriggerd)
@@ -263,16 +276,30 @@ public class GameManager : MonoBehaviour
                     }
                     else if (obj.tag == "Area")
                     {
-                        if (obj.name.Substring(0, 2) == "po")
+                        if (obj.name.Substring(0, 2) == "po" && pUnits[i].GetComponent<Unit>().line.Count > 0)
                         {
                             foreach (var line in pUnits[i].GetComponent<Unit>().line)
-                            {                              
+                            {
                                 pArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
                                 Destroy(line);
                             }
+                            if (pUnits[i].GetComponent<Unit>().line.Count > 0)
+                            {
+                                floodField = new HashSet<(int, int)>();
+                                HashSet<(int, int)> tempSet = new HashSet<(int, int)>();
+                                tempSet.UnionWith(wholeField);
+                                floodField.UnionWith(pField);
+                                FloodFill(width, height);
+                                tempSet.ExceptWith(floodField);
+                                foreach ((int x, int y) item in tempSet)
+                                {
+                                    pArea.Add(Instantiate(po_ar, new Vector3(item.x, item.y, 0), Quaternion.identity));
+                                    pField.Add(item);
+                                }
+                            }
                             pUnits[i].GetComponent<Unit>().line = new List<GameObject>();
                         }
-                        else
+                        else if (obj.name.Substring(0, 2) == "ka")
                         {
                             killList.Add(pUnits[i]);
                         }
@@ -299,16 +326,31 @@ public class GameManager : MonoBehaviour
                     }
                     else if (obj.tag == "Area")
                     {
-                        if (obj.name.Substring(0, 2) == "ka")
+                        if (obj.name.Substring(0, 2) == "ka" && kUnits[i].GetComponent<Unit>().line.Count > 0)
                         {
                             foreach (var line in kUnits[i].GetComponent<Unit>().line)
                             {
-                                pArea.Add(Instantiate(ka_ar, line.transform.position, Quaternion.identity));
+                                kArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
+                                kField.Add(((int)line.transform.position.x, (int)line.transform.position.y));
                                 Destroy(line);
+                            }
+                            if (kUnits[i].GetComponent<Unit>().line.Count != 0)
+                            {
+                                floodField = new HashSet<(int, int)>();
+                                HashSet<(int, int)> tempSet = new HashSet<(int, int)>();
+                                tempSet.UnionWith(wholeField);
+                                floodField.UnionWith(kField);
+                                FloodFill(-1, -1);
+                                tempSet.ExceptWith(floodField);
+                                foreach ((int x, int y) item in tempSet)
+                                {
+                                    kArea.Add(Instantiate(ka_ar, new Vector3(item.x, item.y, 0), Quaternion.identity));
+                                    kField.Add(item);
+                                }
                             }
                             kUnits[i].GetComponent<Unit>().line = new List<GameObject>();
                         }
-                        else
+                        else if (obj.name.Substring(0, 2) == "po")
                         {
                             killList.Add(kUnits[i]);
                         }
@@ -324,8 +366,36 @@ public class GameManager : MonoBehaviour
             item.GetComponent<Unit>().Killed();
         }
         // 승리하면 캐릭터 일러 띄우고 종료/반복
-        if (turncount >= MAX_TURN)
+        if (turncount >= MAX_TURN || kField.Count >= width * height / 2 || pField.Count >= width * height / 2)
         {
+            if (kStocks < 1)
+            {
+                pWin = true;
+                foreach (var item in kUnits)
+                {
+                    if (!item.Equals(null))
+                    {
+                        pWin = false;
+                        break;
+                    }
+                }
+            }
+            if (pStocks < 1)
+            {
+                kWin = true;
+                foreach (var item in pUnits)
+                {
+                    if (!item.Equals(null))
+                    {
+                        kWin = false;
+                        break;
+                    }
+                }
+            }
+            if (kField.Count >= pField.Count) kWin = true;
+            if (pField.Count >= kField.Count) pWin = true;
+            if (kWin) ; // k 에게 승리 메시지
+            if (pWin) ; // p 에게 승리 메시지
             networkManager.ServerSendGameOver();
             networkManager.isActive = false;
         }
@@ -336,27 +406,28 @@ public class GameManager : MonoBehaviour
         killList = new HashSet<GameObject>();
         // 업데이트 마친 후에 변경된 좌표값 출력 => Client에게 전달
         {
-            networkManager.SendGameInfo(pUnits,kUnits,pArea,kArea);
+            networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea);
         }
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(Input.anyKeyDown && !pUnits[0].activeSelf){
+        if (Input.anyKeyDown && !pUnits[0].activeSelf)
+        {
             pUnits[0].transform.position = new Vector3(0, 0, 0);
             pUnits[0].SetActive(true);
         }
         var pos = pUnits[0].transform.position;
-        if(Input.GetKeyDown(KeyCode.UpArrow))
+        if (Input.GetKeyDown(KeyCode.UpArrow))
             pUnits[0].transform.Translate(0, 1, 0);
-        if(Input.GetKeyDown(KeyCode.DownArrow))
+        if (Input.GetKeyDown(KeyCode.DownArrow))
             pUnits[0].transform.Translate(0, -1, 0);
-        if(Input.GetKeyDown(KeyCode.LeftArrow))
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
             pUnits[0].transform.Translate(-1, 0, 0);
-        if(Input.GetKeyDown(KeyCode.RightArrow))
+        if (Input.GetKeyDown(KeyCode.RightArrow))
             pUnits[0].transform.Translate(1, 0, 0);
-        if(Input.anyKeyDown)
+        if (Input.anyKeyDown)
         {
             GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
             ln.GetComponent<Line>().owner = pUnits[0];
@@ -364,57 +435,26 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void FloodFill(GameObject startPoint)
+    private void FloodFill(int x, int y)
     {
-        bool team = startPoint.name == "po_ar";  // 0: ka, 1: po
-
-        Stack<(int X, int Y)> pixels = new Stack<(int, int)>();
-        
-        pixels.Push((width - (width + 1) * Convert.ToInt32(team), height - (height + 1) * Convert.ToInt32(team)));
-        while (pixels.Count != 0)
+        Stack<(int x, int y)> ps = new Stack<(int, int)>();
+        ps.Push((x, y));
+        while (ps.Count != 0)
         {
-            var temp = pixels.Pop();
-            int y1 = temp.Y;
-            // bool check = Physics.OverlapBox(new Vector3(temp.X, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6);
-            // temp x, y 값 사용해서 벡터 종류 찾기
-            while (y1 >= -2 && Physics.OverlapBox(new Vector3(temp.X, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0)
+            var pop = ps.Pop();
+            if (pop.x < -1 || pop.x >= width + 1) continue;
+            if (pop.y < -1 || pop.y >= height + 1) continue;
+            if (!floodField.Contains((pop.x, pop.y)))
             {
-                y1--;
+                floodField.Add((pop.x, pop.y));
+                ps.Push((pop.x + 1, pop.y));
+                ps.Push((pop.x, pop.y + 1));
+                ps.Push((pop.x - 1, pop.y));
+                ps.Push((pop.x, pop.y - 1));
             }
-            y1++;
-            bool spanLeft = false;
-            bool spanRight = false;
-            while (y1 < height + 1 && Physics.OverlapBox(new Vector3(temp.X, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0)
-            {
-                // bmp.SetPixel(temp.X, y1, replacementColor);
-                pArea.Add(Instantiate(po_ar, new Vector3(temp.X, y1, 0), Quaternion.identity));
-                var check1 = Physics.OverlapBox(new Vector3(temp.X - 1, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0;
-                var check2 = Physics.OverlapBox(new Vector3(temp.X + 1, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0;
-
-                if (!spanLeft && temp.X > 0 && check1)
-                {
-                    pixels.Push((temp.X - 1, y1));
-                    spanLeft = true;
-                }
-                else if(spanLeft && temp.X - 1 == 0 && !check1)
-                {
-                    spanLeft = false;
-                }
-                if (!spanRight && temp.X < width - 1 && check2)
-                {
-                    pixels.Push((temp.X + 1, y1));
-                    spanRight = true;
-                }
-                else if (spanRight && temp.X == width && !check2)
-                {
-                    spanRight = false;
-                } 
-                y1++;
-            }
-
         }
-        // pictureBox1.Refresh();
     }
+    // pictureBox1.Refresh();
 
     public bool isTurnActive()
     {
