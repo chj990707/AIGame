@@ -98,3 +98,4 @@ MonoBehaviour:
   isTriggerd: 0
   objects: []
   line: []
+  prevMove: {x: -1, y: 0, z: 0}

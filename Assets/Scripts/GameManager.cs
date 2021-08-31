@@ -120,6 +120,13 @@ public class GameManager : MonoBehaviour
         TurnActive = true;
         networkManager.ServerSendGameStart();
     }
+    /// <summary>
+    /// 
+    /// </summary>
+    public void MoveUnit(GameObject unit, Vector3 direction)
+    {
+
+    }
 
     void TurnUpdate()
     {
@@ -168,9 +175,18 @@ public class GameManager : MonoBehaviour
                 switch (Cur_Com.type)
                 {
                     case Command.CommandType.Move:
-                        if (!piece.activeInHierarchy)
+                        if (!piece.activeSelf)
                         {
                             Debug.Log(String.Format("{0} 사망한 말을 이동하려고 시도함", Cur_Com.isPo ? "포스텍이" : "카이스트가"));
+                            if (Cur_Com.isPo)
+                            {
+                                isPoCommanded[Cur_Com.pieceNum] = false;
+                            }
+                            else
+                            {
+                                isKaCommanded[Cur_Com.pieceNum] = false;
+                            }
+                            break;
                         }
                         Debug.Log("이동 명령:" + Cur_Com.dir);
                         Vector3 pos = piece.transform.position;
@@ -198,26 +214,37 @@ public class GameManager : MonoBehaviour
                             default:
                                 break;
                         }
-                        piece.transform.Translate(direction);
-                        if (piece.transform.position != pos)
+                        if(direction == new Vector3(0, 0, 0))
                         {
-                            GameObject ln;
-                            if (Cur_Com.isPo)
-                            {
-                                ln = Instantiate(po_ln, pos, Quaternion.identity);
-                            }
-                            else
-                            {
-                                ln = Instantiate(ka_ln, pos, Quaternion.identity);
-                            }
-                            ln.GetComponent<Line>().owner = piece;
-                            piece.GetComponent<Unit>().line.Add(ln);
+                            direction = piece.GetComponent<Unit>().prevMove;
                         }
+                        piece.transform.Translate(direction);
+                        piece.GetComponent<Unit>().prevMove = direction;
+                        GameObject ln;
+                        if (Cur_Com.isPo)
+                        {
+                            ln = Instantiate(po_ln, pos, Quaternion.identity);
+                        }
+                        else
+                        {
+                            ln = Instantiate(ka_ln, pos, Quaternion.identity);
+                        }
+                        ln.GetComponent<Line>().owner = piece;
+                        piece.GetComponent<Unit>().line.Add(ln);
                         break;
                     case Command.CommandType.Respawn:
                         if (piece.activeSelf)
                         {
                             Debug.Log(String.Format("{0} 생존한 말을 부활하려고 시도함", Cur_Com.isPo ? "포스텍이" : "카이스트가"));
+                            if (Cur_Com.isPo)
+                            {
+                                isPoCommanded[Cur_Com.pieceNum] = false;
+                            }
+                            else
+                            {
+                                isKaCommanded[Cur_Com.pieceNum] = false;
+                            }
+                            break;
                         }
                         if ((Cur_Com.isPo ? pStocks : kStocks) < 1) break;
                         Debug.Log("부활 명령:" + Cur_Com.pos);
@@ -235,9 +262,37 @@ public class GameManager : MonoBehaviour
                         piece.SetActive(true);
                         break;
                     case Command.CommandType.Wait:
+                        if (Cur_Com.isPo)
+                        {
+                            isPoCommanded[Cur_Com.pieceNum] = false;
+                        }
+                        else
+                        {
+                            isKaCommanded[Cur_Com.pieceNum] = false;
+                        }
                         break;
                     default:
                         break;
+                }
+            }
+            //명령을 받지 않은 말을 이전에 이동한 방향으로 이동
+            for(int i = 0; i < 3; i++)
+            {
+                if (!isKaCommanded[i] && kUnits[i].activeSelf)
+                {
+                    var pos = kUnits[i].transform.position;
+                    kUnits[i].transform.Translate(kUnits[i].GetComponent<Unit>().prevMove);
+                    GameObject ln = Instantiate(ka_ln, pos, Quaternion.identity);
+                    ln.GetComponent<Line>().owner = kUnits[i];
+                    kUnits[i].GetComponent<Unit>().line.Add(ln);
+                }
+                if (!isPoCommanded[i] && pUnits[i].activeSelf)
+                {
+                    var pos = pUnits[i].transform.position;
+                    pUnits[i].transform.Translate(pUnits[i].GetComponent<Unit>().prevMove);
+                    GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
+                    ln.GetComponent<Line>().owner = pUnits[i];
+                    pUnits[i].GetComponent<Unit>().line.Add(ln);
                 }
             }
         }

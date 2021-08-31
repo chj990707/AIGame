@@ -7,6 +7,7 @@ public class Unit : MonoBehaviour
     public bool isTriggerd = false;
     public List<GameObject> objects = new List<GameObject>();
     public List<GameObject> line = new List<GameObject>();
+    public Vector3 prevMove;
 
     // Start is called before the first frame update
     void Start()
