@@ -211,6 +211,30 @@ public class NetworkManager : MonoBehaviour
             String[] CoordString = split_msg[1].Split(',');
             switch (split_msg[0])
             {
+                case "Init":
+                    List<(int x, int y)> temp = new List<(int x, int y)>();
+                    for (int i = 0; i < 3; i++)
+                    {
+                        CoordString = split_msg[1 + i].Split(',');
+                        try
+                        {
+                            temp.Add((int.Parse(CoordString[0]), int.Parse(CoordString[1])));
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Log(String.Format("ÁÂÇ¥ ÆÄ½Ì ¿¹¿Ü : {0}", ex.Message));
+                            break;
+                        }
+                    }
+                    if (user_name == "POSTECH")
+                    {
+                        gameManager.po_init_pos = temp;
+                    }
+                    else
+                    {
+                        gameManager.ka_init_pos = temp;
+                    }
+                    break;
                 case "Move":
                     Output = "ÀÌµ¿ ¸í·É: ";
                     pieceNum = int.Parse(split_msg[1]);
@@ -284,19 +308,31 @@ public class NetworkManager : MonoBehaviour
             string username = pair.Value as string;
             string friendly_unit_msg = string.Empty;
             string enemy_unit_msg = string.Empty;
+            string friendly_line_msg = string.Empty;
+            string enemy_line_msg = string.Empty;
             if (username == "POSTECH")
             {
                 for(int i=0; i < 3; i++)
                 {
                     friendly_unit_msg += (poUnit[i].activeSelf ? "L" : "D") + "," + poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
+                    foreach(GameObject line in poUnit[i].GetComponent<Unit>().line)
+                    {
+                        friendly_line_msg += line.transform.position.x.ToString() + "," + line.transform.position.y.ToString() + "$";
+                    }
                 }
                 for (int i = 0; i < 2; i++)
                 {
                     enemy_unit_msg += (kaUnit[i].activeSelf ? "L" : "D") + "," + kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
+                    foreach (GameObject line in kaUnit[i].GetComponent<Unit>().line)
+                    {
+                        enemy_line_msg += line.transform.position.x.ToString() + "," + line.transform.position.y.ToString() + "$";
+                    }
                 }
                 enemy_unit_msg += (kaUnit[2].activeSelf ? "L" : "D") + "$";
                 ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
                 ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
+                ServerSendMessage("Friendly_Line$" + friendly_line_msg, client);
+                ServerSendMessage("Enemy_Line$" + enemy_line_msg, client);
                 ServerSendMessage("Friendly_Area$" + po_new_area_msg, client);
                 ServerSendMessage("Enemy_Area$" + ka_new_area_msg, client);
             }
@@ -305,14 +341,24 @@ public class NetworkManager : MonoBehaviour
                 for (int i = 0; i < 3; i++)
                 {
                     friendly_unit_msg += (kaUnit[i].activeSelf ? "L" : "D") + "," + kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
+                    foreach (GameObject line in kaUnit[i].GetComponent<Unit>().line)
+                    {
+                        friendly_line_msg += line.transform.position.x.ToString() + "," + line.transform.position.y.ToString() + "$";
+                    }
                 }
                 for (int i = 0; i < 2; i++)
                 {
                     enemy_unit_msg += (poUnit[i].activeSelf ? "L" : "D") + "," + poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
+                    foreach (GameObject line in poUnit[i].GetComponent<Unit>().line)
+                    {
+                        enemy_line_msg += line.transform.position.x.ToString() + "," + line.transform.position.y.ToString() + "$";
+                    }
                 }
                 enemy_unit_msg += (poUnit[2].activeSelf ? "L" : "D") + "$";
                 ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
                 ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
+                ServerSendMessage("Friendly_Line$" + friendly_line_msg, client);
+                ServerSendMessage("Enemy_Line$" + enemy_line_msg, client);
                 ServerSendMessage("Friendly_Area$" + ka_new_area_msg, client);
                 ServerSendMessage("Enemy_Area$" + po_new_area_msg, client);
             }

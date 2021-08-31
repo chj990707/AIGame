@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using UnityEngine;
+using UnityEngine.UI;
 
 
 // 유닛 리스트의 유닛 순서는 공개0, 공개1, 비공개0 순서로 함.
@@ -56,7 +57,22 @@ public class GameManager : MonoBehaviour
     }
 
     private NetworkManager networkManager;
+    public List<(int x, int y)> po_init_pos = new List<(int x, int y)>() {(-1,-1),(-1,-1),(-1,-1) };
+    public List<(int x, int y)> ka_init_pos = new List<(int x, int y)>() {(-1,-1),(-1,-1),(-1,-1) };
+
     public ConcurrentQueue<Command> CommandQueue = new ConcurrentQueue<Command>();
+
+
+    public GameObject ka_score;
+    public GameObject po_score;
+
+    public GameObject ka_character;
+    public GameObject ka_win;
+    public GameObject ka_lose;
+
+    public GameObject po_character;
+    public GameObject po_win;
+    public GameObject po_lose;
 
     public GameObject ka;
     public GameObject po;
@@ -93,6 +109,13 @@ public class GameManager : MonoBehaviour
         turncount = 0;
         kStocks = 4;
         pStocks = 4;
+        for(int x = 0; x < width; x++)
+        {
+            for(int y = 0; y< height; y++)
+            {
+                wholeField.Add((x, y));
+            }
+        }
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         pUnits.Add(Instantiate(po, new Vector3(0, 0, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 1, 0), Quaternion.identity));
@@ -106,11 +129,13 @@ public class GameManager : MonoBehaviour
             for (int y = 0; y < 3; y++)
             {
                 kArea.Add(Instantiate(ka_ar, new Vector3(width - 1 - x, height - 1 - y, 0), Quaternion.identity));
-                kField.Add((x, y));
+                kField.Add((width - 1 - x, height - 1 - y));
                 pArea.Add(Instantiate(po_ar, new Vector3(x, y, 0), Quaternion.identity));
                 pField.Add((x, y));
             }
         }
+        ka_score.GetComponent<Text>().text = kField.Count.ToString();
+        po_score.GetComponent<Text>().text = pField.Count.ToString();
         Time.fixedDeltaTime = 0.005f;
     }
 
@@ -118,7 +143,6 @@ public class GameManager : MonoBehaviour
     {
         TurnTimer = StartCoroutine("turnTimer");
         TurnActive = true;
-        networkManager.ServerSendGameStart();
     }
 
     public void MoveUnit(bool isPo, GameObject unit)
@@ -447,6 +471,8 @@ public class GameManager : MonoBehaviour
         {
             item.GetComponent<Unit>().Killed();
         }
+        ka_score.GetComponent<Text>().text = kField.Count.ToString();
+        po_score.GetComponent<Text>().text = pField.Count.ToString();
         // 승리하면 캐릭터 일러 띄우고 종료/반복
         if (turncount >= MAX_TURN || kField.Count >= width * height / 2 || pField.Count >= width * height / 2)
         {
@@ -476,8 +502,20 @@ public class GameManager : MonoBehaviour
             }
             if (kField.Count >= pField.Count) kWin = true;
             if (pField.Count >= kField.Count) pWin = true;
-            if (kWin) ; // k 에게 승리 메시지
-            if (pWin) ; // p 에게 승리 메시지
+            if (kWin) 
+            {
+                ka_character.SetActive(false);
+                po_character.SetActive(false);
+                ka_win.SetActive(true);
+                po_lose.SetActive(true);
+            } // k 에게 승리 메시지
+            if (pWin)
+            {
+                ka_character.SetActive(false);
+                po_character.SetActive(false);
+                ka_lose.SetActive(true);
+                po_win.SetActive(true);
+            } // p 에게 승리 메시지
             networkManager.ServerSendGameOver();
             networkManager.isActive = false;
         }
@@ -545,6 +583,11 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator turnTimer() // TURN_TIME 초간 대기하고 플레이어에게 "TurnTimeOut$" 전송 후 게임 데이터 전송 (필요시 WaitUntil(isTurnActive)를 사용해서 제어할 것) 
     {
+        networkManager.ServerSendGameStart();
+        yield return new WaitForSecondsRealtime(TURN_TIME);
+        networkManager.ServerSendTurnover();
+        InitializePos();
+        networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea);
         while (true)
         {
             networkManager.ServerSendTurnStart();
@@ -553,6 +596,21 @@ public class GameManager : MonoBehaviour
             TurnActive = false;
             TurnUpdate();
             yield return new WaitUntil(isTurnActive);
+        }
+    }
+
+    private void InitializePos()
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            if (kField.Contains(ka_init_pos[i]))
+            {
+                kUnits[i].transform.position = new Vector3(ka_init_pos[i].x, ka_init_pos[i].y);
+            }
+            if (pField.Contains(po_init_pos[i]))
+            {
+                pUnits[i].transform.position = new Vector3(po_init_pos[i].x, po_init_pos[i].y);
+            }
         }
     }
 }
