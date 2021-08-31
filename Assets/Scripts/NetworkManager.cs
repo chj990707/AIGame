@@ -288,12 +288,13 @@ public class NetworkManager : MonoBehaviour
             {
                 for(int i=0; i < 3; i++)
                 {
-                    friendly_unit_msg += poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
+                    friendly_unit_msg += poUnit[i].activeSelf ? "L" : "D" + "," + poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
                 }
                 for (int i = 0; i < 2; i++)
                 {
-                    enemy_unit_msg += kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
+                    enemy_unit_msg += kaUnit[i].activeSelf ? "L" : "D" + "," + kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
                 }
+                enemy_unit_msg += kaUnit[2].activeSelf ? "L" : "D" + "$";
                 ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
                 ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
                 ServerSendMessage("Friendly_Area$" + po_new_area_msg, client);
@@ -303,12 +304,13 @@ public class NetworkManager : MonoBehaviour
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    friendly_unit_msg += kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
+                    friendly_unit_msg += kaUnit[i].activeSelf ? "L" : "D" + "," + kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
                 }
                 for (int i = 0; i < 2; i++)
                 {
-                    enemy_unit_msg += poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
+                    enemy_unit_msg += poUnit[i].activeSelf ? "L" : "D" + "," + poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
                 }
+                enemy_unit_msg += poUnit[2].activeSelf ? "L" : "D" + "$";
                 ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
                 ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
                 ServerSendMessage("Friendly_Area$" + ka_new_area_msg, client);
