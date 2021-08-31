@@ -120,12 +120,26 @@ public class GameManager : MonoBehaviour
         TurnActive = true;
         networkManager.ServerSendGameStart();
     }
-    /// <summary>
-    /// 
-    /// </summary>
-    public void MoveUnit(GameObject unit, Vector3 direction)
-    {
 
+    public void MoveUnit(bool isPo, GameObject unit)
+    {
+        var pos = unit.transform.position;
+        unit.transform.Translate(unit.GetComponent<Unit>().nextMove);
+        foreach (Collider obj in Physics.OverlapBox(pos, new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity))
+        {
+            if (obj.GetComponent<Area>() != null) return;
+        }
+        GameObject ln;
+        if (isPo)
+        {
+            ln = Instantiate(po_ln, pos, Quaternion.identity);
+        }
+        else
+        {
+            ln = Instantiate(ka_ln, pos, Quaternion.identity);
+        }
+        ln.GetComponent<Line>().owner = unit;
+        unit.GetComponent<Unit>().line.Add(ln);
     }
 
     void TurnUpdate()
@@ -139,7 +153,6 @@ public class GameManager : MonoBehaviour
             {
                 Command Cur_Com;
                 CommandQueue.TryDequeue(out Cur_Com);
-                Debug.Log("대기중인 명령 수 : " + CommandQueue.Count);
                 GameObject piece;
                 if (Cur_Com.pieceNum > 3)
                 {
@@ -188,7 +201,6 @@ public class GameManager : MonoBehaviour
                             }
                             break;
                         }
-                        Debug.Log("이동 명령:" + Cur_Com.dir);
                         Vector3 pos = piece.transform.position;
                         Vector3 direction = new Vector3(0, 0, 0);
                         switch (Cur_Com.dir)
@@ -196,41 +208,24 @@ public class GameManager : MonoBehaviour
                             case Command.Direction.NONE:
                                 break;
                             case Command.Direction.UP:
-                                if (pos.y >= height - 1) break;
                                 direction = new Vector3(0, 1, 0);
                                 break;
                             case Command.Direction.DOWN:
-                                if (pos.y <= 0) break;
                                 direction = new Vector3(0, -1, 0);
                                 break;
                             case Command.Direction.LEFT:
-                                if (pos.x <= 0) break;
                                 direction = new Vector3(-1, 0, 0);
                                 break;
                             case Command.Direction.RIGHT:
-                                if (pos.x >= width - 1) break;
                                 direction = new Vector3(1, 0, 0);
                                 break;
                             default:
                                 break;
                         }
-                        if(direction == new Vector3(0, 0, 0))
+                        if(direction != new Vector3(0, 0, 0))
                         {
-                            direction = piece.GetComponent<Unit>().prevMove;
+                            piece.GetComponent<Unit>().nextMove = direction;
                         }
-                        piece.transform.Translate(direction);
-                        piece.GetComponent<Unit>().prevMove = direction;
-                        GameObject ln;
-                        if (Cur_Com.isPo)
-                        {
-                            ln = Instantiate(po_ln, pos, Quaternion.identity);
-                        }
-                        else
-                        {
-                            ln = Instantiate(ka_ln, pos, Quaternion.identity);
-                        }
-                        ln.GetComponent<Line>().owner = piece;
-                        piece.GetComponent<Unit>().line.Add(ln);
                         break;
                     case Command.CommandType.Respawn:
                         if (piece.activeSelf)
@@ -247,10 +242,9 @@ public class GameManager : MonoBehaviour
                             break;
                         }
                         if ((Cur_Com.isPo ? pStocks : kStocks) < 1) break;
-                        Debug.Log("부활 명령:" + Cur_Com.pos);
                         bool isinArea = false;
-                        Collider2D[] inPosition = Physics2D.OverlapCircleAll(Cur_Com.pos, 0.2f);
-                        foreach (Collider2D obj in inPosition)
+                        Collider[] Lapsing = Physics.OverlapSphere(new Vector3(Cur_Com.pos.x, Cur_Com.pos.y), 0.2f);
+                        foreach (Collider obj in Lapsing)
                         {
                             if (obj.gameObject.GetComponent<Area>() != null)
                             {
@@ -275,24 +269,32 @@ public class GameManager : MonoBehaviour
                         break;
                 }
             }
-            //명령을 받지 않은 말을 이전에 이동한 방향으로 이동
+            //말을 다음에 이동할 방향으로 이동
             for(int i = 0; i < 3; i++)
             {
-                if (!isKaCommanded[i] && kUnits[i].activeSelf)
+                if (kUnits[i].activeSelf)
                 {
                     var pos = kUnits[i].transform.position;
-                    kUnits[i].transform.Translate(kUnits[i].GetComponent<Unit>().prevMove);
-                    GameObject ln = Instantiate(ka_ln, pos, Quaternion.identity);
-                    ln.GetComponent<Line>().owner = kUnits[i];
-                    kUnits[i].GetComponent<Unit>().line.Add(ln);
+                    MoveUnit(false, kUnits[i]);
+                    if(kUnits[i].transform.position.x < 0 ||
+                       kUnits[i].transform.position.x >= width ||
+                       kUnits[i].transform.position.y < 0 ||
+                       kUnits[i].transform.position.y >= height)
+                    {
+                        killList.Add(kUnits[i]);
+                    }
                 }
-                if (!isPoCommanded[i] && pUnits[i].activeSelf)
+                if (pUnits[i].activeSelf)
                 {
                     var pos = pUnits[i].transform.position;
-                    pUnits[i].transform.Translate(pUnits[i].GetComponent<Unit>().prevMove);
-                    GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
-                    ln.GetComponent<Line>().owner = pUnits[i];
-                    pUnits[i].GetComponent<Unit>().line.Add(ln);
+                    MoveUnit(true, pUnits[i]);
+                    if (pUnits[i].transform.position.x < 0 ||
+                       pUnits[i].transform.position.x >= width ||
+                       pUnits[i].transform.position.y < 0 ||
+                       pUnits[i].transform.position.y >= height)
+                    {
+                        killList.Add(pUnits[i]);
+                    }
                 }
             }
         }
@@ -337,25 +339,30 @@ public class GameManager : MonoBehaviour
                 {
                     if (obj.tag == "Unit")
                     {
+                        Debug.Log(i + "번 포스텍 유닛 다른 유닛과 충돌");
                         killList.Add(obj);
                         killList.Add(pUnits[i]);
                     }
                     else if (obj.tag == "Line")
                     {
+                        Debug.Log(i + "번 포스텍 유닛 선 밟음");
                         killList.Add(obj.GetComponent<Line>().owner);
                     }
                     else if (obj.tag == "Area")
                     {
                         if (obj.name.Substring(0, 2) == "po" && pUnits[i].GetComponent<Unit>().line.Count > 0)
                         {
+                            Debug.Log(i + "번 포스텍 유닛 채우기 함수 실행");
                             foreach (var line in pUnits[i].GetComponent<Unit>().line)
                             {
+                                Debug.Log(i + "번 포스텍 유닛 선을 파괴하고 영역으로 대체");
                                 pArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
                                 pField.Add(((int)line.transform.position.x, (int)line.transform.position.y));
                                 Destroy(line);
                             }
                             if (pUnits[i].GetComponent<Unit>().line.Count > 0)
                             {
+                                Debug.Log(i + "번 포스텍 유닛 영역 채우기");
                                 floodField = new HashSet<(int, int)>();
                                 HashSet<(int, int)> tempSet = new HashSet<(int, int)>();
                                 tempSet.UnionWith(wholeField);
@@ -388,11 +395,13 @@ public class GameManager : MonoBehaviour
                 {
                     if (obj.tag == "Unit")
                     {
+                        Debug.Log(i + "번 카이스트 유닛 다른 유닛에 충돌함");
                         killList.Add(obj);
                         killList.Add(kUnits[i]);
                     }
                     else if (obj.tag == "Line")
                     {
+                        Debug.Log(i + "번 카이스트 유닛 선 밟음");
                         killList.Add(obj.GetComponent<Line>().owner);
                     }
                     else if (obj.tag == "Area")
@@ -401,12 +410,14 @@ public class GameManager : MonoBehaviour
                         {
                             foreach (var line in kUnits[i].GetComponent<Unit>().line)
                             {
-                                kArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
+                                Debug.Log(i + "번 카이스트 유닛 선을 영역으로 바꿈");
+                                kArea.Add(Instantiate(ka_ar, line.transform.position, Quaternion.identity));
                                 kField.Add(((int)line.transform.position.x, (int)line.transform.position.y));
                                 Destroy(line);
                             }
                             if (kUnits[i].GetComponent<Unit>().line.Count != 0)
                             {
+                                Debug.Log(i + "번 카이스트 유닛 영역 채우기");
                                 floodField = new HashSet<(int, int)>();
                                 HashSet<(int, int)> tempSet = new HashSet<(int, int)>();
                                 tempSet.UnionWith(wholeField);
@@ -532,16 +543,16 @@ public class GameManager : MonoBehaviour
         return TurnActive;
     }
 
-    private IEnumerator turnTimer() // TURN_TIME 초간 대기하고 플레이어에게 "Timeout$" 전송 후 게임 데이터 전송 (필요시 WaitUntil(isTurnActive)를 사용해서 제어할 것) 
+    private IEnumerator turnTimer() // TURN_TIME 초간 대기하고 플레이어에게 "TurnTimeOut$" 전송 후 게임 데이터 전송 (필요시 WaitUntil(isTurnActive)를 사용해서 제어할 것) 
     {
         while (true)
         {
+            networkManager.ServerSendTurnStart();
             yield return new WaitForSecondsRealtime(TURN_TIME);
             networkManager.ServerSendTurnover();
             TurnActive = false;
             TurnUpdate();
             yield return new WaitUntil(isTurnActive);
-            networkManager.ServerSendTurnStart();
         }
     }
 }
