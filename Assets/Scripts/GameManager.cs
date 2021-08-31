@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using UnityEngine;
 
 
-// 유닛 리스트의 유닛 순서는 공개0, 공개1, 공개2, 비공개0 순서로 함.
+// 유닛 리스트의 유닛 순서는 공개0, 공개1, 비공개0 순서로 함.
 
 public class GameManager : MonoBehaviour
 {

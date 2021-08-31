@@ -12,7 +12,6 @@ using UnityEngine;
 // 임시 기능: Encode_Send_Coord : "Coord$X0,Y0$X1,Y1$X2,Y2$X3,Y3$" 형식으로 4개의 말 위치 전송
 // 서버 종료시(isActive = false) 모든 클라이언트에게 "GameOver$" 전송
 // TURN_TIME만큼 대기 후 "TurnTimeout$" 전송, 각 플레이어에게 게임 정보 송신 후 "TurnStart$" 전송
-// 임시 기능 : Coord$X좌표,Y좌표 형식의 메세지를 받을 경우 파싱하여 디버그 로그 출력함
 //
 // 전송할 정보: 말 위치, 새로운 타일 위치
 // 수신할 정보: 말의 이동 방향, 말의 부활 위치
