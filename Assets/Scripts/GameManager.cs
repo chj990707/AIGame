@@ -124,8 +124,8 @@ public class GameManager : MonoBehaviour
         turncount++;
         // Client에게 좌표 받고 Unit 이동
         {
-            bool[] isKaCommanded = new bool[4] { false, false, false };
-            bool[] isPoCommanded = new bool[4] { false, false, false };
+            bool[] isKaCommanded = new bool[3] { false, false, false };
+            bool[] isPoCommanded = new bool[3] { false, false, false };
             while(CommandQueue.Count > 0)
             {
                 Command Cur_Com;
@@ -217,7 +217,7 @@ public class GameManager : MonoBehaviour
                         {
                             Debug.Log(String.Format("{0} 생존한 말을 부활하려고 시도함", Cur_Com.isPo ? "포스텍이" : "카이스트가"));
                         }
-                        if (Cur_Com.isPo ? pStocks : kStocks < 1) break;
+                        if ((Cur_Com.isPo ? pStocks : kStocks) < 1) break;
                         Debug.Log("부활 명령:" + Cur_Com.pos);
                         bool isinArea = false;
                         Collider2D[] inPosition = Physics2D.OverlapCircleAll(Cur_Com.pos, 0.2f);
