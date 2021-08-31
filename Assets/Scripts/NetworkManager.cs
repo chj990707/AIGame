@@ -203,58 +203,62 @@ public class NetworkManager : MonoBehaviour
     /// <param name="message">메세지 내용</param>
     private void ParseMessage(string user_name, string message) 
     {
-        String[] split_msg = message.Split('$');
-        String Output = string.Empty;
-        int pieceNum;
-        Vector2 CoordVector;
-        String[] CoordString = split_msg[1].Split(',');
-        switch (split_msg[0])
+        string[] split_cmd = message.Split('/');
+        foreach(string cmd in split_cmd)
         {
-            case "Move":
-                Output = "이동 명령: ";
-                pieceNum = int.Parse(split_msg[1]);
-                string dir = split_msg[2];
-                switch (dir)
-                {
-                    case "U":
-                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.UP));
-                        break;
-                    case "D":
-                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.DOWN));
-                        break;
-                    case "L":
-                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.LEFT));
-                        break;
-                    case "R":
-                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.RIGHT));
-                        break;
-                    default:
-                        break;
-                }
-                Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + split_msg[2]);
-                break;
-            case "Respawn":
-                Output = "부활 명령: ";
-                pieceNum = int.Parse(split_msg[1]);
-                CoordString = split_msg[2].Split(',');
-                try
-                {
-                    CoordVector = new Vector2(float.Parse(CoordString[0]), float.Parse(CoordString[1]));
-                }
-                catch (Exception ex)
-                {
-                    Debug.Log(String.Format("좌표 파싱 예외 : {0}", ex.Message));
+            String[] split_msg = cmd.Split('$');
+            String Output = string.Empty;
+            int pieceNum;
+            Vector2 CoordVector;
+            String[] CoordString = split_msg[1].Split(',');
+            switch (split_msg[0])
+            {
+                case "Move":
+                    Output = "이동 명령: ";
+                    pieceNum = int.Parse(split_msg[1]);
+                    string dir = split_msg[2];
+                    switch (dir)
+                    {
+                        case "U":
+                            gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.UP));
+                            break;
+                        case "D":
+                            gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.DOWN));
+                            break;
+                        case "L":
+                            gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.LEFT));
+                            break;
+                        case "R":
+                            gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.RIGHT));
+                            break;
+                        default:
+                            break;
+                    }
+                    Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + split_msg[2]);
                     break;
-                }
-                Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + CoordVector);
-                gameManager.CommandQueue.Enqueue(GameManager.Command.respawnCommand(user_name == "POSTECH", pieceNum, CoordVector));
-                break;
-            case "Wait":
-                Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + "대기 명령");
-                break;
-            default:
-                Debug.Log("알 수 없는 명령: " + user_name + " , " + message);
-                break;
+                case "Respawn":
+                    Output = "부활 명령: ";
+                    pieceNum = int.Parse(split_msg[1]);
+                    CoordString = split_msg[2].Split(',');
+                    try
+                    {
+                        CoordVector = new Vector2(float.Parse(CoordString[0]), float.Parse(CoordString[1]));
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log(String.Format("좌표 파싱 예외 : {0}", ex.Message));
+                        break;
+                    }
+                    Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + CoordVector);
+                    gameManager.CommandQueue.Enqueue(GameManager.Command.respawnCommand(user_name == "POSTECH", pieceNum, CoordVector));
+                    break;
+                case "Wait":
+                    Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + "대기 명령");
+                    break;
+                default:
+                    Debug.Log("알 수 없는 명령: " + user_name + " , " + message);
+                    break;
+            }
         }
     }
     /// <summary>
@@ -284,11 +288,11 @@ public class NetworkManager : MonoBehaviour
             string enemy_unit_msg = string.Empty;
             if (username == "POSTECH")
             {
-                for(int i=0; i < 4; i++)
+                for(int i=0; i < 3; i++)
                 {
                     friendly_unit_msg += poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
                 }
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 2; i++)
                 {
                     enemy_unit_msg += kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
                 }
@@ -299,11 +303,11 @@ public class NetworkManager : MonoBehaviour
             }
             else if (username == "KAIST")
             {
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     friendly_unit_msg += kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
                 }
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 2; i++)
                 {
                     enemy_unit_msg += poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
                 }

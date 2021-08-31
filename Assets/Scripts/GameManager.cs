@@ -9,10 +9,12 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public int width = 180;
-    public int height = 120;
+    public const int width = 40;
+    public const int height = 30;
+    public int turncount;
+    public const int MAX_TURN = 600;
 
-    public const float TURN_TIME = 5.0f;
+    public const float TURN_TIME = 0.5f;
     private bool TurnActive;
     Coroutine TurnTimer;
 
@@ -80,15 +82,14 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        turncount = 0;
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         pUnits.Add(Instantiate(po, new Vector3(0, 0, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 1, 0), Quaternion.identity));
         pUnits.Add(Instantiate(po, new Vector3(0, 1, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 2, 0), Quaternion.identity));
-        pUnits.Add(Instantiate(po, new Vector3(0, 2, 0), Quaternion.identity));
-        kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 3, 0), Quaternion.identity));
-        pUnits.Add(Instantiate(po_tp, new Vector3(0, 3, 0), Quaternion.identity));
-        kUnits.Add(Instantiate(ka_tp, new Vector3(width - 1, height - 4, 0), Quaternion.identity));
+        pUnits.Add(Instantiate(po_tp, new Vector3(0, 2, 0), Quaternion.identity));
+        kUnits.Add(Instantiate(ka_tp, new Vector3(width - 1, height - 3, 0), Quaternion.identity));
         // Draw Initial Area
         for (int x = 0; x < 6; x++){
             for (int y = 0; y < 4; y ++){
@@ -108,6 +109,7 @@ public class GameManager : MonoBehaviour
 
     void TurnUpdate()
     {
+        turncount++;
         // Client에게 좌표 받고 Unit 이동
         {
             bool[] isKaCommanded = new bool[4] { false, false, false, false };
@@ -118,7 +120,6 @@ public class GameManager : MonoBehaviour
                 CommandQueue.TryDequeue(out Cur_Com);
                 Debug.Log("대기중인 명령 수 : " + CommandQueue.Count);
                 GameObject piece;
-                Debug.Log(Cur_Com);
                 if (Cur_Com.isPo)
                 {
                     if (isPoCommanded[Cur_Com.pieceNum])
@@ -322,14 +323,8 @@ public class GameManager : MonoBehaviour
         {
             item.GetComponent<Unit>().Killed();
         }
-
-        killList = new HashSet<GameObject>();
-        // 업데이트 마친 후에 변경된 좌표값 출력 => Client에게 전달
-        {
-            networkManager.SendGameInfo(pUnits,kUnits,pArea,kArea);
-        }
         // 승리하면 캐릭터 일러 띄우고 종료/반복
-        if (false)
+        if (turncount >= MAX_TURN)
         {
             networkManager.ServerSendGameOver();
             networkManager.isActive = false;
@@ -337,6 +332,11 @@ public class GameManager : MonoBehaviour
         else
         {
             TurnActive = true;
+        }
+        killList = new HashSet<GameObject>();
+        // 업데이트 마친 후에 변경된 좌표값 출력 => Client에게 전달
+        {
+            networkManager.SendGameInfo(pUnits,kUnits,pArea,kArea);
         }
     }
 
