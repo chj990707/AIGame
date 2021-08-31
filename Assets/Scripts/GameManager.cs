@@ -1,12 +1,60 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using UnityEngine;
+
+
+// 유닛 리스트의 유닛 순서는 공개0, 공개1, 공개2, 비공개0 순서로 함.
 
 public class GameManager : MonoBehaviour
 {
     public int width = 180;
     public int height = 120;
+
+    public const float TURN_TIME = 5.0f;
+    private bool TurnActive;
+    Coroutine TurnTimer;
+
+    public class Command
+    {
+        public enum CommandType { Move, Respawn, Wait };
+        public enum Direction { NONE = -1, UP, DOWN, LEFT, RIGHT};
+
+        public bool isPo { get; private set; } //팀
+        public int pieceNum { get; private set; }
+        public CommandType type { get; private set; }
+        public Vector2 pos { get; private set; }
+        public Direction dir { get; private set; }
+
+        public static Command waitCommand(bool isPostech, int _pieceNum)
+        {
+            return new Command(isPostech, _pieceNum, CommandType.Wait, new Vector2(-1, -1), Direction.NONE);
+        }
+
+        public static Command respawnCommand(bool isPostech, int _pieceNum, Vector2 _pos)
+        {
+            return new Command(isPostech, _pieceNum, CommandType.Respawn, _pos, Direction.NONE);
+        }
+
+        public static Command moveCommand(bool isPostech, int _pieceNum, Direction _dir)
+        {
+            return new Command(isPostech, _pieceNum, CommandType.Move, new Vector2(-1, -1), _dir);
+        }
+
+        private Command(bool isPostech, int _pieceNum, CommandType _type, Vector2 _pos, Direction _dir)
+        {
+            isPo = isPostech;
+            pieceNum = _pieceNum;
+            type = _type;
+            pos = _pos;
+            dir = _dir;
+        }
+
+    }
+
+    private NetworkManager networkManager;
+    public ConcurrentQueue<Command> CommandQueue = new ConcurrentQueue<Command>();
 
     public GameObject ka;
     public GameObject po;
@@ -32,8 +80,15 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         pUnits.Add(Instantiate(po, new Vector3(0, 0, 0), Quaternion.identity));
         kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 1, 0), Quaternion.identity));
+        pUnits.Add(Instantiate(po, new Vector3(0, 1, 0), Quaternion.identity));
+        kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 2, 0), Quaternion.identity));
+        pUnits.Add(Instantiate(po, new Vector3(0, 2, 0), Quaternion.identity));
+        kUnits.Add(Instantiate(ka, new Vector3(width - 1, height - 3, 0), Quaternion.identity));
+        pUnits.Add(Instantiate(po_tp, new Vector3(0, 3, 0), Quaternion.identity));
+        kUnits.Add(Instantiate(ka_tp, new Vector3(width - 1, height - 4, 0), Quaternion.identity));
         // Draw Initial Area
         for (int x = 0; x < 6; x++){
             for (int y = 0; y < 4; y ++){
@@ -44,9 +99,122 @@ public class GameManager : MonoBehaviour
         Time.fixedDeltaTime = 0.005f;
     }
 
-    void FixedUpdate()
+    public void GameStart()
+    {
+        TurnTimer = StartCoroutine("turnTimer");
+        TurnActive = true;
+        networkManager.ServerSendGameStart();
+    }
+
+    void TurnUpdate()
     {
         // Client에게 좌표 받고 Unit 이동
+        {
+            bool[] isKaCommanded = new bool[4] { false, false, false, false };
+            bool[] isPoCommanded = new bool[4] { false, false, false, false };
+            while(CommandQueue.Count > 0)
+            {
+                Command Cur_Com;
+                CommandQueue.TryDequeue(out Cur_Com);
+                Debug.Log("대기중인 명령 수 : " + CommandQueue.Count);
+                GameObject piece;
+                Debug.Log(Cur_Com);
+                if (Cur_Com.isPo)
+                {
+                    if (isPoCommanded[Cur_Com.pieceNum])
+                    {
+                        Debug.Log("포스텍이 중복 명령 실행 시도");
+                        continue;
+                    }
+                    else
+                    {
+                        isPoCommanded[Cur_Com.pieceNum] = true;
+                    }
+                    piece = pUnits[Cur_Com.pieceNum];
+                }
+                else
+                {
+                    if (isKaCommanded[Cur_Com.pieceNum])
+                    {
+                        Debug.Log("카이스트가 중복 명령 실행 시도");
+                        continue;
+                    }
+                    else
+                    {
+                        isKaCommanded[Cur_Com.pieceNum] = true;
+                    }
+                    piece = kUnits[Cur_Com.pieceNum];
+                }
+                switch (Cur_Com.type)
+                {
+                    case Command.CommandType.Move:
+                        if (!piece.activeInHierarchy)
+                        {
+                            Debug.Log(String.Format("{0} 사망한 말을 이동하려고 시도함", Cur_Com.isPo ? "포스텍이" : "카이스트가"));
+                        }
+                        Debug.Log("이동 명령:" + Cur_Com.dir);
+                        Vector3 pos = piece.transform.position;
+                        Vector3 direction = new Vector3(0, 0, 0);
+                        switch (Cur_Com.dir)
+                        {
+                            case Command.Direction.NONE:
+                                break;
+                            case Command.Direction.UP:
+                                if (pos.y >= height - 1) break;
+                                direction = new Vector3(0, 1, 0);
+                                break;
+                            case Command.Direction.DOWN:
+                                if (pos.y <= 0) break;
+                                direction = new Vector3(0, -1, 0);
+                                break;
+                            case Command.Direction.LEFT:
+                                if (pos.x <= 0) break;
+                                direction = new Vector3(-1, 0, 0);
+                                break;
+                            case Command.Direction.RIGHT:
+                                if (pos.x >= width - 1) break;
+                                direction = new Vector3(1, 0, 0);
+                                break;
+                            default:
+                                break;
+                        }
+                        piece.transform.Translate(direction);
+                        if(piece.transform.position != pos)
+                        {
+                            GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
+                            ln.GetComponent<Line>().owner = pUnits[0];
+                            pUnits[0].GetComponent<Unit>().line.Add(ln);
+                        }
+                        break;
+                    case Command.CommandType.Respawn:
+                        if (piece.activeSelf)
+                        {
+                            Debug.Log(String.Format("{0} 생존한 말을 부활하려고 시도함", Cur_Com.isPo ? "포스텍이" : "카이스트가"));
+                        }
+                        Debug.Log("부활 명령:" + Cur_Com.pos);
+                        bool isinArea = false;
+                        Collider2D[] inPosition = Physics2D.OverlapCircleAll(Cur_Com.pos, 0.2f);
+                        foreach(Collider2D obj in inPosition)
+                        {
+                            if (obj.gameObject.GetComponent<Area>() != null) 
+                            {
+                                isinArea = (obj.gameObject.GetComponent<Area>().isPo == Cur_Com.isPo);
+                            }
+                        }
+                        if (!isinArea) break; 
+                        piece.transform.position = Cur_Com.pos;
+                        piece.SetActive(true);
+                        break;
+                    case Command.CommandType.Wait:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        //**최현준 주석: 위의 명령 처리부에서 선을 그리도록 수정했습니다. 이 부분은 확인 후 제거 부탁합니다.
+        //
         // for (int i = 0; i < pUnits[i].GetComponent<Unit>().line.Count; i++)
         // {
             // 움직일 때마다 선 그리기 (Line object 생성)
@@ -157,8 +325,19 @@ public class GameManager : MonoBehaviour
 
         killList = new HashSet<GameObject>();
         // 업데이트 마친 후에 변경된 좌표값 출력 => Client에게 전달
-
+        {
+            networkManager.SendGameInfo(pUnits,kUnits,pArea,kArea);
+        }
         // 승리하면 캐릭터 일러 띄우고 종료/반복
+        if (false)
+        {
+            networkManager.ServerSendGameOver();
+            networkManager.isActive = false;
+        }
+        else
+        {
+            TurnActive = true;
+        }
     }
 
     // Update is called once per frame
@@ -235,5 +414,23 @@ public class GameManager : MonoBehaviour
 
         }
         // pictureBox1.Refresh();
+    }
+
+    public bool isTurnActive()
+    {
+        return TurnActive;
+    }
+
+    private IEnumerator turnTimer() // TURN_TIME 초간 대기하고 플레이어에게 "Timeout$" 전송 후 게임 데이터 전송 (필요시 WaitUntil(isTurnActive)를 사용해서 제어할 것) 
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(TURN_TIME);
+            networkManager.ServerSendTurnover();
+            TurnActive = false;
+            TurnUpdate();
+            yield return new WaitUntil(isTurnActive);
+            networkManager.ServerSendTurnStart();
+        }
     }
 }

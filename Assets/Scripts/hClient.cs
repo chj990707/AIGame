@@ -38,7 +38,7 @@ public class handleClient
         NetworkStream stream = null;
         try
         {
-            byte[] buffer = new byte[10000];
+            byte[] buffer = new byte[1000];
             string msg = string.Empty;
             int bytes = 0;
             int MessageCount = 0;

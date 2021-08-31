@@ -14,15 +14,18 @@ using UnityEngine;
 // TURN_TIME만큼 대기 후 "TurnTimeout$" 전송, 각 플레이어에게 게임 정보 송신 후 "TurnStart$" 전송
 // 임시 기능 : Coord$X좌표,Y좌표 형식의 메세지를 받을 경우 파싱하여 디버그 로그 출력함
 //
+// 전송할 정보: 말 위치, 새로운 타일 위치
+// 수신할 정보: 말의 이동 방향, 말의 부활 위치
+//
 //수정이 필요한 기능:
 //Onreceived, ParseMessage에 string split으로 받은 패킷을 명령으로 파싱하도록 하는 기능
 //SendGameInfo에 게임 정보 플레이어에게 송신하도록 구현
 
-
 public class NetworkManager : MonoBehaviour
 {
+    private GameManager gameManager;
+
     public const int BUFFER_SIZE = 10000;
-    public const float TURN_TIME = 5.0f;
     TcpListener server = null;
     TcpClient clientSocket = null;
     static int counter = 0;
@@ -30,19 +33,17 @@ public class NetworkManager : MonoBehaviour
     private Dictionary<TcpClient, string> clientList = new Dictionary<TcpClient, string>(); //Tcp Client에 해당하는 유저명을 저장하는 딕셔너리
     private Dictionary<string, TcpClient> clientList_by_username = new Dictionary<string, TcpClient>(); // 유저명에 해당하는 Tcp Client를 저장하는 딕셔너리(위의 딕셔너리와 키, 밸류 위치만 다름)
     private int port_num = 9999;
-    bool isActive;
-    private bool TurnActive;
+    public bool isActive;
 
     Coroutine NetworkCoroutine;
-    Coroutine TurnTimer;
     // Start is called before the first frame update
     void Start()
     {
+        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
         isActive = true;
-        TurnTimer = StartCoroutine("turnTimer");
         NetworkCoroutine = StartCoroutine("InitSocket");
-        userList.Add("PHOENIX", "1234");//유저 정보를 수동으로 입력함
-        userList.Add("넙죽이", "5678");
+        userList.Add("POSTECH", "1234");//유저 정보를 수동으로 입력함
+        userList.Add("KAIST", "5678");
     }
 
     // Update is called once per frame
@@ -54,6 +55,18 @@ public class NetworkManager : MonoBehaviour
     void OnDestroy()
     {
         isActive = false;
+        Debug.Log("Server is closing!");
+        ServerSendMessageAll("GameOver$");
+        foreach (var pair in clientList)
+        {
+            TcpClient client = pair.Key as TcpClient;
+            client.Close();
+        }
+        if (clientSocket != null)
+        {
+            clientSocket.Close();
+        }
+        server.Stop();
     }
 
 
@@ -66,6 +79,7 @@ public class NetworkManager : MonoBehaviour
         while (isActive)
         {
             yield return new WaitForFixedUpdate();
+            if (clientList_by_username.ContainsKey("KAIST") && clientList_by_username.ContainsKey("POSTECH")) continue;
             try
             {
                 if (!server.Pending())
@@ -100,6 +114,10 @@ public class NetworkManager : MonoBehaviour
             }
             catch (SocketException se) { break; }
             catch (Exception ex) { break; }
+            if (clientList_by_username.ContainsKey("KAIST") && clientList_by_username.ContainsKey("POSTECH"))
+            {
+                gameManager.GameStart();
+            }
         }
         Debug.Log("Server is closing!");
         ServerSendMessageAll("GameOver$");
@@ -130,7 +148,7 @@ public class NetworkManager : MonoBehaviour
     private void OnReceived(string message, string user_name) // 현재 턴이 활성화된 상태일 시 받은 정보를 파싱해서 넘김 
     {
         string displayMessage = "From client : " + user_name + " : " + message;
-        if (isTurnActive())
+        if (gameManager.isTurnActive())
         {
             ParseMessage(user_name, message);
             DisplayText(displayMessage);
@@ -144,7 +162,7 @@ public class NetworkManager : MonoBehaviour
             TcpClient client = pair.Key as TcpClient;
             NetworkStream stream = client.GetStream();
             byte[] buffer = null;
-            buffer = Encoding.Unicode.GetBytes(message);
+            buffer = Encoding.Unicode.GetBytes(message + "/");
 
             stream.Write(buffer, 0, buffer.Length);
             stream.Flush();
@@ -156,7 +174,7 @@ public class NetworkManager : MonoBehaviour
         if (client == null) return;
         NetworkStream stream = client.GetStream();
         byte[] buffer = null;
-        buffer = Encoding.Unicode.GetBytes(message);
+        buffer = Encoding.Unicode.GetBytes(message + "/");
 
         stream.Write(buffer, 0, buffer.Length);
         stream.Flush();
@@ -168,7 +186,7 @@ public class NetworkManager : MonoBehaviour
         if (!clientList_by_username.TryGetValue(name, out client)) return;
         NetworkStream stream = client.GetStream();
         byte[] buffer = null;
-        buffer = Encoding.Unicode.GetBytes(message);
+        buffer = Encoding.Unicode.GetBytes(message + "/");
 
         stream.Write(buffer, 0, buffer.Length);
         stream.Flush();
@@ -178,16 +196,47 @@ public class NetworkManager : MonoBehaviour
         Debug.Log(text);
     }
 
-
-    private void ParseMessage(string user_name, string message) // 클라이언트가 송신한 패킷을 받아서 명령어로 파싱함
+    /// <summary>
+    /// 클라이언트가 송신한 메세지를 받아서 명령으로 파싱해 게임매니저에 전달
+    /// </summary>
+    /// <param name="user_name">유저명</param>
+    /// <param name="message">메세지 내용</param>
+    private void ParseMessage(string user_name, string message) 
     {
         String[] split_msg = message.Split('$');
+        String Output = string.Empty;
+        int pieceNum;
+        Vector2 CoordVector;
+        String[] CoordString = split_msg[1].Split(',');
         switch (split_msg[0])
         {
-            case "Coord":
-                String Output = "좌표 파싱됨: ";
-                String[] CoordString = split_msg[1].Split(',');
-                Vector2 CoordVector;
+            case "Move":
+                Output = "이동 명령: ";
+                pieceNum = int.Parse(split_msg[1]);
+                string dir = split_msg[2];
+                switch (dir)
+                {
+                    case "U":
+                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.UP));
+                        break;
+                    case "D":
+                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.DOWN));
+                        break;
+                    case "L":
+                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.LEFT));
+                        break;
+                    case "R":
+                        gameManager.CommandQueue.Enqueue(GameManager.Command.moveCommand(user_name == "POSTECH", pieceNum, GameManager.Command.Direction.RIGHT));
+                        break;
+                    default:
+                        break;
+                }
+                Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + split_msg[2]);
+                break;
+            case "Respawn":
+                Output = "부활 명령: ";
+                pieceNum = int.Parse(split_msg[1]);
+                CoordString = split_msg[2].Split(',');
                 try
                 {
                     CoordVector = new Vector2(float.Parse(CoordString[0]), float.Parse(CoordString[1]));
@@ -197,20 +246,72 @@ public class NetworkManager : MonoBehaviour
                     Debug.Log(String.Format("좌표 파싱 예외 : {0}", ex.Message));
                     break;
                 }
-                Debug.Log(Output + CoordVector);
+                Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + CoordVector);
+                gameManager.CommandQueue.Enqueue(GameManager.Command.respawnCommand(user_name == "POSTECH", pieceNum, CoordVector));
+                break;
+            case "Wait":
+                Debug.Log(Output + user_name + " , " + split_msg[1] + "번 말, " + "대기 명령");
                 break;
             default:
+                Debug.Log("알 수 없는 명령: " + user_name + " , " + message);
                 break;
         }
     }
-
-    private void SendGameInfo() // 각 플레이어에게 게임 상태 송신함
+    /// <summary>
+    /// 각 플레이어에게 게임의 상태 송신
+    /// </summary>
+    /// <param name="poUnit">포스텍 유닛 리스트</param>
+    /// <param name="kaUnit">카이스트 유닛 리스트</param>
+    /// <param name="poNewArea">이번 턴에 새로 생성된 포스텍 영역</param>
+    /// <param name="kaNewArea">이번 턴에 새로 생성된 카이스트 영역</param>
+    public void SendGameInfo(List<GameObject>poUnit, List<GameObject>kaUnit, List<GameObject> poNewArea, List<GameObject>kaNewArea)
     {
+        string po_new_area_msg = string.Empty;
+        string ka_new_area_msg = string.Empty;
+        foreach(GameObject obj in poNewArea)
+        {
+            po_new_area_msg += obj.transform.position.x + "," + obj.transform.position.y + "$";
+        }
+        foreach (GameObject obj in kaNewArea)
+        {
+            ka_new_area_msg += obj.transform.position.x + "," + obj.transform.position.y + "$";
+        }
         foreach (var pair in clientList)
         {
             TcpClient client = pair.Key as TcpClient;
             string username = pair.Value as string;
-            ServerSendMessage("", client);
+            string friendly_unit_msg = string.Empty;
+            string enemy_unit_msg = string.Empty;
+            if (username == "POSTECH")
+            {
+                for(int i=0; i < 4; i++)
+                {
+                    friendly_unit_msg += poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    enemy_unit_msg += kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
+                }
+                ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
+                ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
+                ServerSendMessage("Friendly_New_Area$" + po_new_area_msg, client);
+                ServerSendMessage("Enemy_New_Area$" + ka_new_area_msg, client);
+            }
+            else if (username == "KAIST")
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    friendly_unit_msg += kaUnit[i].transform.position.x.ToString() + "," + kaUnit[i].transform.position.y.ToString() + "$";
+                }
+                for (int i = 0; i < 3; i++)
+                {
+                    enemy_unit_msg += poUnit[i].transform.position.x.ToString() + "," + poUnit[i].transform.position.y.ToString() + "$";
+                }
+                ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
+                ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
+                ServerSendMessage("Friendly_New_Area$" + ka_new_area_msg, client);
+                ServerSendMessage("Enemy_New_Area$" + po_new_area_msg, client);
+            }
         }
     }
 
@@ -225,33 +326,24 @@ public class NetworkManager : MonoBehaviour
         ServerSendMessage(encoded, username);
         return true;
     }
-    private IEnumerator turnTimer() // TURN_TIME 초간 대기하고 플레이어에게 "Timeout$" 전송 후 게임 데이터 전송 (필요시 WaitUntil(isTurnActive)를 사용해서 제어할 것) 
+
+    public void ServerSendTurnStart()
     {
-        while (true)
-        {
-            yield return new WaitForSecondsRealtime(TURN_TIME);
-            ServerSendMessageAll("TurnTimeOut$");
-            TurnActive = false;
-            SendGameInfo();
-            //yield return new WaitUntil(isTurnActive);
-            TurnActive = true;
-            ServerSendMessageAll("TurnStart$");
-        }
+        ServerSendMessageAll("TurnStart");
     }
 
-    public bool isTurnActive()
+    public void ServerSendTurnover()
     {
-        return TurnActive;
+        ServerSendMessageAll("TurnTimeOut");
     }
 
-    public void TestFunc_SendCoord()
+    public void ServerSendGameStart()
     {
-        Vector2[] CoordList = {new Vector2(0, 0), new Vector2(2, 3), new Vector2(4, 5), new Vector2(6, 7)};
-        Encode_Send_Coord(CoordList, "PHOENIX");
+        ServerSendMessageAll("GameStart");
     }
 
-    public void TestFunc_KillServer()
+    public void ServerSendGameOver()
     {
-        isActive = false;
+        ServerSendMessageAll("GameOver");
     }
 }
