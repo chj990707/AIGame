@@ -72,7 +72,11 @@ public class GameManager : MonoBehaviour
     private List<GameObject> kArea = new List<GameObject>();
     private List<GameObject> pArea = new List<GameObject>();
 
-    public HashSet<GameObject> killList = new HashSet<GameObject>();
+    private HashSet<GameObject> killList = new HashSet<GameObject>();
+    private HashSet<(int x, int y)> wholeField = new HashSet<(int, int)>();
+    private HashSet<(int x, int y)> kField = new HashSet<(int, int)>();
+    private HashSet<(int x, int y)> pField = new HashSet<(int, int)>();
+    private HashSet<(int x, int y)> floodField = new HashSet<(int, int)>();
 
     void Awake()
     {
@@ -112,14 +116,19 @@ public class GameManager : MonoBehaviour
         turncount++;
         // Client에게 좌표 받고 Unit 이동
         {
-            bool[] isKaCommanded = new bool[4] { false, false, false, false };
-            bool[] isPoCommanded = new bool[4] { false, false, false, false };
+            bool[] isKaCommanded = new bool[4] { false, false, false };
+            bool[] isPoCommanded = new bool[4] { false, false, false };
             while(CommandQueue.Count > 0)
             {
                 Command Cur_Com;
                 CommandQueue.TryDequeue(out Cur_Com);
                 Debug.Log("대기중인 명령 수 : " + CommandQueue.Count);
                 GameObject piece;
+                if (Cur_Com.pieceNum > 3)
+                {
+                    Debug.Log(Cur_Com.isPo?"포스텍":"카이스트" + " 말의 번호가 지나치게 큼: " + Cur_Com.pieceNum);
+                    continue;
+                }
                 if (Cur_Com.isPo)
                 {
                     if (isPoCommanded[Cur_Com.pieceNum])
@@ -182,9 +191,17 @@ public class GameManager : MonoBehaviour
                         piece.transform.Translate(direction);
                         if(piece.transform.position != pos)
                         {
-                            GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
-                            ln.GetComponent<Line>().owner = pUnits[0];
-                            pUnits[0].GetComponent<Unit>().line.Add(ln);
+                            GameObject ln;
+                            if (Cur_Com.isPo)
+                            {
+                                ln = Instantiate(po_ln, pos, Quaternion.identity);
+                            }
+                            else
+                            {
+                                ln = Instantiate(ka_ln, pos, Quaternion.identity);
+                            }
+                            ln.GetComponent<Line>().owner = piece;
+                            piece.GetComponent<Unit>().line.Add(ln);
                         }
                         break;
                     case Command.CommandType.Respawn:
@@ -194,14 +211,7 @@ public class GameManager : MonoBehaviour
                         }
                         Debug.Log("부활 명령:" + Cur_Com.pos);
                         bool isinArea = false;
-                        Collider2D[] inPosition = Physics2D.OverlapCircleAll(Cur_Com.pos, 0.2f);
-                        foreach(Collider2D obj in inPosition)
-                        {
-                            if (obj.gameObject.GetComponent<Area>() != null) 
-                            {
-                                isinArea = (obj.gameObject.GetComponent<Area>().isPo == Cur_Com.isPo);
-                            }
-                        }
+                        
                         if (!isinArea) break; 
                         piece.transform.position = Cur_Com.pos;
                         piece.SetActive(true);
@@ -263,16 +273,30 @@ public class GameManager : MonoBehaviour
                     }
                     else if (obj.tag == "Area")
                     {
-                        if (obj.name.Substring(0, 2) == "po")
+                        if (obj.name.Substring(0, 2) == "po" && pUnits[i].GetComponent<Unit>().line.Count > 0)
                         {
                             foreach (var line in pUnits[i].GetComponent<Unit>().line)
                             {                              
                                 pArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
                                 Destroy(line);
                             }
+                            if (pUnits[i].GetComponent<Unit>().line.Count > 0)
+                            {
+                                floodField = new HashSet<(int, int)>();
+                                HashSet<(int, int)> tempSet = new HashSet<(int, int)>();
+                                tempSet.UnionWith(wholeField);
+                                floodField.UnionWith(pField);
+                                FloodFill(width, height);
+                                tempSet.ExceptWith(floodField);
+                                foreach ((int x, int y) item in tempSet)
+                                {
+                                    pArea.Add(Instantiate(po_ar, new Vector3(item.x, item.y, 0), Quaternion.identity));
+                                    pField.Add(item);
+                                }
+                            }
                             pUnits[i].GetComponent<Unit>().line = new List<GameObject>();
                         }
-                        else
+                        else if (obj.name.Substring(0, 2) == "ka")
                         {
                             killList.Add(pUnits[i]);
                         }
@@ -299,16 +323,31 @@ public class GameManager : MonoBehaviour
                     }
                     else if (obj.tag == "Area")
                     {
-                        if (obj.name.Substring(0, 2) == "ka")
+                        if (obj.name.Substring(0, 2) == "ka" && kUnits[i].GetComponent<Unit>().line.Count > 0)
                         {
                             foreach (var line in kUnits[i].GetComponent<Unit>().line)
                             {
-                                pArea.Add(Instantiate(ka_ar, line.transform.position, Quaternion.identity));
+                                kArea.Add(Instantiate(po_ar, line.transform.position, Quaternion.identity));
+                                kField.Add(((int)line.transform.position.x, (int)line.transform.position.y));
                                 Destroy(line);
+                            }
+                            if (kUnits[i].GetComponent<Unit>().line.Count != 0)
+                            {
+                                floodField = new HashSet<(int, int)>();
+                                HashSet<(int, int)> tempSet = new HashSet<(int, int)>();
+                                tempSet.UnionWith(wholeField);
+                                floodField.UnionWith(kField);
+                                FloodFill(-1, -1);
+                                tempSet.ExceptWith(floodField);
+                                foreach ((int x, int y) item in tempSet)
+                                {
+                                    kArea.Add(Instantiate(ka_ar, new Vector3(item.x, item.y, 0), Quaternion.identity));
+                                    kField.Add(item);
+                                }
                             }
                             kUnits[i].GetComponent<Unit>().line = new List<GameObject>();
                         }
-                        else
+                        else if (obj.name.Substring(0, 2) == "po")
                         {
                             killList.Add(kUnits[i]);
                         }
@@ -364,57 +403,26 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void FloodFill(GameObject startPoint)
+    private void FloodFill(int x, int y)
     {
-        bool team = startPoint.name == "po_ar";  // 0: ka, 1: po
-
-        Stack<(int X, int Y)> pixels = new Stack<(int, int)>();
-        
-        pixels.Push((width - (width + 1) * Convert.ToInt32(team), height - (height + 1) * Convert.ToInt32(team)));
-        while (pixels.Count != 0)
+        Stack<(int x, int y)> ps = new Stack<(int, int)>();
+        ps.Push((x, y));
+        while (ps.Count != 0)
         {
-            var temp = pixels.Pop();
-            int y1 = temp.Y;
-            // bool check = Physics.OverlapBox(new Vector3(temp.X, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6);
-            // temp x, y 값 사용해서 벡터 종류 찾기
-            while (y1 >= -2 && Physics.OverlapBox(new Vector3(temp.X, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0)
+            var pop = ps.Pop();
+            if (pop.x < -1 || pop.x >= width + 1) continue;
+            if (pop.y < -1 || pop.y >= height + 1) continue;
+            if (!floodField.Contains((pop.x, pop.y)))
             {
-                y1--;
+                floodField.Add((pop.x, pop.y));
+                ps.Push((pop.x + 1, pop.y));
+                ps.Push((pop.x, pop.y + 1));
+                ps.Push((pop.x - 1, pop.y));
+                ps.Push((pop.x, pop.y - 1));
             }
-            y1++;
-            bool spanLeft = false;
-            bool spanRight = false;
-            while (y1 < height + 1 && Physics.OverlapBox(new Vector3(temp.X, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0)
-            {
-                // bmp.SetPixel(temp.X, y1, replacementColor);
-                pArea.Add(Instantiate(po_ar, new Vector3(temp.X, y1, 0), Quaternion.identity));
-                var check1 = Physics.OverlapBox(new Vector3(temp.X - 1, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0;
-                var check2 = Physics.OverlapBox(new Vector3(temp.X + 1, y1, 0f), new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity, 6).Length > 0;
-
-                if (!spanLeft && temp.X > 0 && check1)
-                {
-                    pixels.Push((temp.X - 1, y1));
-                    spanLeft = true;
-                }
-                else if(spanLeft && temp.X - 1 == 0 && !check1)
-                {
-                    spanLeft = false;
-                }
-                if (!spanRight && temp.X < width - 1 && check2)
-                {
-                    pixels.Push((temp.X + 1, y1));
-                    spanRight = true;
-                }
-                else if (spanRight && temp.X == width && !check2)
-                {
-                    spanRight = false;
-                } 
-                y1++;
-            }
-
         }
-        // pictureBox1.Refresh();
     }
+    // pictureBox1.Refresh();
 
     public bool isTurnActive()
     {

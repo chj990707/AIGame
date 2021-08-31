@@ -151,7 +151,6 @@ public class NetworkManager : MonoBehaviour
         if (gameManager.isTurnActive())
         {
             ParseMessage(user_name, message);
-            DisplayText(displayMessage);
         }
     }
 
@@ -298,8 +297,8 @@ public class NetworkManager : MonoBehaviour
                 }
                 ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
                 ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
-                ServerSendMessage("Friendly_New_Area$" + po_new_area_msg, client);
-                ServerSendMessage("Enemy_New_Area$" + ka_new_area_msg, client);
+                ServerSendMessage("Friendly_Area$" + po_new_area_msg, client);
+                ServerSendMessage("Enemy_Area$" + ka_new_area_msg, client);
             }
             else if (username == "KAIST")
             {
@@ -313,22 +312,10 @@ public class NetworkManager : MonoBehaviour
                 }
                 ServerSendMessage("Friendly_Unit$" + friendly_unit_msg, client);
                 ServerSendMessage("Enemy_Unit$" + enemy_unit_msg, client);
-                ServerSendMessage("Friendly_New_Area$" + ka_new_area_msg, client);
-                ServerSendMessage("Enemy_New_Area$" + po_new_area_msg, client);
+                ServerSendMessage("Friendly_Area$" + ka_new_area_msg, client);
+                ServerSendMessage("Enemy_Area$" + po_new_area_msg, client);
             }
         }
-    }
-
-    private bool Encode_Send_Coord(Vector2[] dots, string username) // Map에 현재 상황 데이터, username에 어떤 플레이어에게 전달할 정보인지 구분해 현재 상황 데이터를 전송(Vector2는 placeholder)
-    {
-        string encoded = string.Empty;
-        encoded += "Coord$";
-        for(int i = 0; i < 4; i++)
-        {
-            encoded += ((int)dots[i].x).ToString() + "," + ((int)dots[i].y).ToString() + "$"; // X,Y$ 를 뒤에 붙임
-        }
-        ServerSendMessage(encoded, username);
-        return true;
     }
 
     public void ServerSendTurnStart()
