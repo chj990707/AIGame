@@ -288,17 +288,17 @@ public class NetworkManager : MonoBehaviour
     /// </summary>
     /// <param name="poUnit">포스텍 유닛 리스트</param>
     /// <param name="kaUnit">카이스트 유닛 리스트</param>
-    /// <param name="poNewArea">이번 턴에 새로 생성된 포스텍 영역</param>
-    /// <param name="kaNewArea">이번 턴에 새로 생성된 카이스트 영역</param>
-    public void SendGameInfo(List<GameObject>poUnit, List<GameObject>kaUnit, List<GameObject> poNewArea, List<GameObject>kaNewArea)
+    /// <param name="poArea">포스텍 영역</param>
+    /// <param name="kaArea">카이스트 영역</param>
+    public void SendGameInfo(List<GameObject>poUnit, List<GameObject>kaUnit, List<GameObject> poArea, List<GameObject>kaArea)
     {
         string po_new_area_msg = string.Empty;
         string ka_new_area_msg = string.Empty;
-        foreach(GameObject obj in poNewArea)
+        foreach(GameObject obj in poArea)
         {
             po_new_area_msg += obj.transform.position.x + "," + obj.transform.position.y + "$";
         }
-        foreach (GameObject obj in kaNewArea)
+        foreach (GameObject obj in kaArea)
         {
             ka_new_area_msg += obj.transform.position.x + "," + obj.transform.position.y + "$";
         }
