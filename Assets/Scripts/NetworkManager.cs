@@ -93,7 +93,7 @@ public class NetworkManager : MonoBehaviour
                 int bytes = stream.Read(buffer, 0, buffer.Length);
                 string user_info = Encoding.Unicode.GetString(buffer, 0, bytes);
                 user_info = user_info.Trim();
-                user_info = user_info.Trim(new char[] { '\uFEFF', '\u200B' });
+                user_info = user_info.Trim(new char[] { '\uFEFF', '\u200B', '\u0000' });
                 string[] user_info_split = user_info.Split('/', '$');
                 string user_name = user_info_split[0];
                 string password = user_info_split[1];
@@ -157,7 +157,7 @@ public class NetworkManager : MonoBehaviour
     private void OnReceived(string message, string user_name) // 현재 턴이 활성화된 상태일 시 받은 정보를 파싱해서 넘김 
     {
         string trim_message = message.Trim();
-        trim_message = trim_message.Trim(new char[] { '\uFEFF', '\u200B' });
+        trim_message = trim_message.Trim(new char[] { '\uFEFF', '\u200B', '\u0000' });
         string displayMessage = "From client : " + user_name + " : " + trim_message;
         Debug.Log(displayMessage);
         if (gameManager.isTurnActive())
@@ -217,7 +217,8 @@ public class NetworkManager : MonoBehaviour
         string[] split_cmd = message.Split('/');
         foreach(string cmd in split_cmd)
         {
-            String[] split_msg = cmd.Split('$');
+            String trim_cmd = cmd.Trim(new char[] { '\uFEFF', '\u200B', '\u0000' });
+            String[] split_msg = trim_cmd.Split('$');
             String Output = string.Empty;
             int pieceNum;
             Vector2 CoordVector;
