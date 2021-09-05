@@ -156,10 +156,13 @@ public class NetworkManager : MonoBehaviour
 
     private void OnReceived(string message, string user_name) // 현재 턴이 활성화된 상태일 시 받은 정보를 파싱해서 넘김 
     {
-        string displayMessage = "From client : " + user_name + " : " + message;
+        string trim_message = message.Trim();
+        trim_message = trim_message.Trim(new char[] { '\uFEFF', '\u200B' });
+        string displayMessage = "From client : " + user_name + " : " + trim_message;
+        Debug.Log(displayMessage);
         if (gameManager.isTurnActive())
         {
-            ParseMessage(user_name, message);
+            ParseMessage(user_name, trim_message);
         }
     }
 
@@ -211,8 +214,6 @@ public class NetworkManager : MonoBehaviour
     /// <param name="message">메세지 내용</param>
     private void ParseMessage(string user_name, string message)
     {
-        message = message.Trim();
-        message = message.Trim(new char[] { '\uFEFF', '\u200B' });
         string[] split_cmd = message.Split('/');
         foreach(string cmd in split_cmd)
         {
@@ -224,6 +225,7 @@ public class NetworkManager : MonoBehaviour
             switch (split_msg[0])
             {
                 case "Init":
+                    Debug.Log("Initializing : " + message);
                     List<(int x, int y)> temp = new List<(int x, int y)>();
                     for (int i = 0; i < 3; i++)
                     {
