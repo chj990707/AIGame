@@ -92,15 +92,23 @@ public class NetworkManager : MonoBehaviour
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int bytes = stream.Read(buffer, 0, buffer.Length);
                 string user_info = Encoding.Unicode.GetString(buffer, 0, bytes);
+                Debug.Log(user_info);
                 string[] user_info_split = user_info.Split('/', '$');
                 string user_name = user_info_split[0];
                 string password = user_info_split[1];
                 string server_password;
-                if(!userList.TryGetValue(user_name, out server_password) || server_password != password)
+                if(!userList.TryGetValue(user_name, out server_password))
                 {
                     clientSocket.Close();
                     counter--;
-                    Debug.Log("Non-appropriate user information");
+                    Debug.Log("Non-appropriate user information " + user_name);
+                    continue;
+                }
+                else if(server_password != password)
+                {
+                    clientSocket.Close();
+                    counter--;
+                    Debug.Log("Non-appropriate user information " + user_name + ", "+ password);
                     continue;
                 }
                 ServerSendMessage("Logged", clientSocket);
