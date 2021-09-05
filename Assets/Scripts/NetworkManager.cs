@@ -92,8 +92,9 @@ public class NetworkManager : MonoBehaviour
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int bytes = stream.Read(buffer, 0, buffer.Length);
                 string user_info = Encoding.Unicode.GetString(buffer, 0, bytes);
-                string user_name = user_info.Substring(0, user_info.IndexOf("$"));
-                string password = user_info.Substring(user_info.IndexOf("$") + 1);
+                string[] user_info_split = user_info.Split('/', '$');
+                string user_name = user_info_split[0];
+                string password = user_info_split[1];
                 string server_password;
                 if(!userList.TryGetValue(user_name, out server_password) || server_password != password)
                 {
@@ -102,7 +103,7 @@ public class NetworkManager : MonoBehaviour
                     Debug.Log("Non-appropriate user information");
                     continue;
                 }
-                ServerSendMessage("Logged$", clientSocket);
+                ServerSendMessage("Logged", clientSocket);
                 clientList.Add(clientSocket, user_name);
                 clientList_by_username.Add(user_name, clientSocket);
                 DisplayText(user_name + "가 접속했습니다. 패스워드 : " + password + ", 현재 접속자 수 : " + counter);
