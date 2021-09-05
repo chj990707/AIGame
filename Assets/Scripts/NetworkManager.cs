@@ -92,7 +92,8 @@ public class NetworkManager : MonoBehaviour
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int bytes = stream.Read(buffer, 0, buffer.Length);
                 string user_info = Encoding.Unicode.GetString(buffer, 0, bytes);
-                Debug.Log(user_info);
+                user_info = user_info.Trim();
+                user_info = user_info.Trim(new char[] { '\uFEFF', '\u200B' });
                 string[] user_info_split = user_info.Split('/', '$');
                 string user_name = user_info_split[0];
                 string password = user_info_split[1];
@@ -208,8 +209,10 @@ public class NetworkManager : MonoBehaviour
     /// </summary>
     /// <param name="user_name">유저명</param>
     /// <param name="message">메세지 내용</param>
-    private void ParseMessage(string user_name, string message) 
+    private void ParseMessage(string user_name, string message)
     {
+        message = message.Trim();
+        message = message.Trim(new char[] { '\uFEFF', '\u200B' });
         string[] split_cmd = message.Split('/');
         foreach(string cmd in split_cmd)
         {
