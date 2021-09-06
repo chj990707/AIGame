@@ -217,6 +217,7 @@ public class NetworkManager : MonoBehaviour
         string[] split_cmd = message.Split('/');
         foreach(string cmd in split_cmd)
         {
+            if (cmd == string.Empty) continue;
             String trim_cmd = cmd.Trim(new char[] { '\uFEFF', '\u200B', '\u0000' });
             String[] split_msg = trim_cmd.Split('$');
             String Output = string.Empty;
