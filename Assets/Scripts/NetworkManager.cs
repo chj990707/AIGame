@@ -168,6 +168,7 @@ public class NetworkManager : MonoBehaviour
 
     public void ServerSendMessageAll(string message) //모든 클라이언트에 동일한 내용 송신
     {
+        Debug.Log("Send All: " + message);
         foreach (var pair in clientList)
         {
             TcpClient client = pair.Key as TcpClient;
@@ -182,6 +183,7 @@ public class NetworkManager : MonoBehaviour
 
     public void ServerSendMessage(string message, TcpClient client) // 클라이언트 객체에 기반해 송신
     {
+        Debug.Log("Send: " + message);
         if (client == null) return;
         NetworkStream stream = client.GetStream();
         byte[] buffer = null;
@@ -193,6 +195,7 @@ public class NetworkManager : MonoBehaviour
 
     public void ServerSendMessage(string message, string name) // 클라이언트 이름에 기반해 송신
     {
+        Debug.Log("Send: " + message);
         TcpClient client;
         if (!clientList_by_username.TryGetValue(name, out client)) return;
         NetworkStream stream = client.GetStream();
