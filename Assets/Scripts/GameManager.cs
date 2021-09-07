@@ -139,8 +139,8 @@ public class GameManager : MonoBehaviour
         }
         ka_score.GetComponent<Text>().text = kField.Count.ToString();
         po_score.GetComponent<Text>().text = pField.Count.ToString();
-        ka_stock_board.GetComponent<Text>().text = "남은 말 수: " + kField.Count.ToString();
-        po_stock_board.GetComponent<Text>().text = "남은 말 수: " + pField.Count.ToString();
+        ka_stock_board.GetComponent<Text>().text = "남은 말 수: " + kStocks.ToString();
+        po_stock_board.GetComponent<Text>().text = "남은 말 수: " + pStocks.ToString();
         Time.fixedDeltaTime = 0.005f;
     }
 
