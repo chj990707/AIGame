@@ -382,8 +382,8 @@ public class NetworkManager : MonoBehaviour
                 ServerSendMessage("Enemy_Line$" + enemy_line_msg, client);
                 ServerSendMessage("Friendly_Area$" + ka_new_area_msg, client);
                 ServerSendMessage("Enemy_Area$" + po_new_area_msg, client);
-                ServerSendMessage("Friendly_Stock$" + kStocks, client);
-                ServerSendMessage("Enemy_Stock$" + pStocks, client);
+                ServerSendMessage("Friendly_Stocks$" + kStocks, client);
+                ServerSendMessage("Enemy_Stocks$" + pStocks, client);
             }
         }
     }

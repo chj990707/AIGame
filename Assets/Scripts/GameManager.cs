@@ -484,6 +484,8 @@ public class GameManager : MonoBehaviour
         }
         ka_score.GetComponent<Text>().text = kField.Count.ToString();
         po_score.GetComponent<Text>().text = pField.Count.ToString();
+        ka_stock_board.GetComponent<Text>().text = "남은 말 수: " + kStocks.ToString();
+        po_stock_board.GetComponent<Text>().text = "남은 말 수: " + pStocks.ToString();
         // 승리하면 캐릭터 일러 띄우고 종료/반복
         if (turncount >= MAX_TURN || kField.Count >= width * height / 2 || pField.Count >= width * height / 2)
         {
