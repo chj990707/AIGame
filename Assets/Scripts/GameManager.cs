@@ -87,8 +87,8 @@ public class GameManager : MonoBehaviour
     private List<GameObject> pUnits = new List<GameObject>();
     private List<GameObject> kArea = new List<GameObject>();
     private List<GameObject> pArea = new List<GameObject>();
-    private int kStocks;
-    private int pStocks;
+    public int kStocks { get; private set; }
+    public int pStocks { get; private set; }
     private bool kWin;
     private bool pWin;
 
@@ -265,7 +265,11 @@ public class GameManager : MonoBehaviour
                             }
                             break;
                         }
-                        if ((Cur_Com.isPo ? pStocks : kStocks) < 1) break;
+                        if ((Cur_Com.isPo ? pStocks : kStocks) < 1) 
+                        {
+                            Debug.Log(String.Format("{0} 남은 목숨이 없음", Cur_Com.isPo ? "포스텍" : "카이스트"));
+                            break; 
+                        }
                         bool isinArea = false;
                         Collider[] Lapsing = Physics.OverlapSphere(new Vector3(Cur_Com.pos.x, Cur_Com.pos.y), 0.2f);
                         foreach (Collider obj in Lapsing)
@@ -278,6 +282,8 @@ public class GameManager : MonoBehaviour
                         if (!isinArea) break;
                         piece.transform.position = Cur_Com.pos;
                         piece.SetActive(true);
+                        if (Cur_Com.isPo) pStocks--;
+                        else kStocks--;
                         break;
                     case Command.CommandType.Wait:
                         if (Cur_Com.isPo)
