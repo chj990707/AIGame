@@ -309,7 +309,7 @@ public class NetworkManager : MonoBehaviour
     /// <param name="kaUnit">카이스트 유닛 리스트</param>
     /// <param name="poArea">포스텍 영역</param>
     /// <param name="kaArea">카이스트 영역</param>
-    public void SendGameInfo(List<GameObject>poUnit, List<GameObject>kaUnit, List<GameObject> poArea, List<GameObject>kaArea)
+    public void SendGameInfo(List<GameObject>poUnit, List<GameObject>kaUnit, List<GameObject> poArea, List<GameObject>kaArea, int pStocks, int kStocks)
     {
         string po_new_area_msg = string.Empty;
         string ka_new_area_msg = string.Empty;
@@ -354,6 +354,8 @@ public class NetworkManager : MonoBehaviour
                 ServerSendMessage("Enemy_Line$" + enemy_line_msg, client);
                 ServerSendMessage("Friendly_Area$" + po_new_area_msg, client);
                 ServerSendMessage("Enemy_Area$" + ka_new_area_msg, client);
+                ServerSendMessage("Friendly_Stocks$" + pStocks + "$", client);
+                ServerSendMessage("Enemy_Stocks$" + kStocks +"$", client);
             }
             else if (username == "KAIST")
             {
@@ -380,6 +382,8 @@ public class NetworkManager : MonoBehaviour
                 ServerSendMessage("Enemy_Line$" + enemy_line_msg, client);
                 ServerSendMessage("Friendly_Area$" + ka_new_area_msg, client);
                 ServerSendMessage("Enemy_Area$" + po_new_area_msg, client);
+                ServerSendMessage("Friendly_Stock$" + kStocks, client);
+                ServerSendMessage("Enemy_Stock$" + pStocks, client);
             }
         }
     }

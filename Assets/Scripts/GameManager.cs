@@ -90,8 +90,8 @@ public class GameManager : MonoBehaviour
     private List<GameObject> pUnits = new List<GameObject>();
     private List<GameObject> kArea = new List<GameObject>();
     private List<GameObject> pArea = new List<GameObject>();
-    public int kStocks { get; private set; }
-    public int pStocks { get; private set; }
+    private int kStocks;
+    private int pStocks;
     private bool kWin;
     private bool pWin;
 
@@ -537,7 +537,7 @@ public class GameManager : MonoBehaviour
         killList = new HashSet<GameObject>();
         // 업데이트 마친 후에 변경된 좌표값 출력 => Client에게 전달
         {
-            networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea);
+            networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea, pStocks, kStocks);
         }
     }
 
@@ -598,7 +598,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSecondsRealtime(TURN_TIME);
         networkManager.ServerSendTurnover();
         InitializePos();
-        networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea);
+        networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea, pStocks, kStocks);
         while (true)
         {
             networkManager.ServerSendTurnStart();
