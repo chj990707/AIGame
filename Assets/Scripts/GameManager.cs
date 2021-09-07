@@ -66,6 +66,9 @@ public class GameManager : MonoBehaviour
     public GameObject ka_score;
     public GameObject po_score;
 
+    public GameObject ka_stock_board;
+    public GameObject po_stock_board;
+
     public GameObject ka_character;
     public GameObject ka_win;
     public GameObject ka_lose;
@@ -136,6 +139,8 @@ public class GameManager : MonoBehaviour
         }
         ka_score.GetComponent<Text>().text = kField.Count.ToString();
         po_score.GetComponent<Text>().text = pField.Count.ToString();
+        ka_stock_board.GetComponent<Text>().text = "남은 말 수: " + kField.Count.ToString();
+        po_stock_board.GetComponent<Text>().text = "남은 말 수: " + pField.Count.ToString();
         Time.fixedDeltaTime = 0.005f;
     }
 
