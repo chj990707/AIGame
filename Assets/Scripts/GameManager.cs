@@ -63,6 +63,7 @@ public class GameManager : MonoBehaviour
     public ConcurrentQueue<Command> CommandQueue = new ConcurrentQueue<Command>();
 
 
+    public GameObject TurnCounter;
     public GameObject ka_score;
     public GameObject po_score;
 
@@ -94,6 +95,7 @@ public class GameManager : MonoBehaviour
     private int pStocks;
     private bool kWin;
     private bool pWin;
+    private bool isGameOver;
 
     private HashSet<GameObject> killList = new HashSet<GameObject>();
     private HashSet<(int x, int y)> wholeField = new HashSet<(int, int)>();
@@ -109,6 +111,9 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        kWin = false;
+        pWin = false;
+        isGameOver = false;
         turncount = 0;
         kStocks = 4;
         pStocks = 4;
@@ -141,6 +146,7 @@ public class GameManager : MonoBehaviour
         po_score.GetComponent<Text>().text = pField.Count.ToString();
         ka_stock_board.GetComponent<Text>().text = "남은 말 수: " + kStocks.ToString();
         po_stock_board.GetComponent<Text>().text = "남은 말 수: " + pStocks.ToString();
+        TurnCounter.GetComponent<Text>().text = turncount.ToString() + " 턴";
         Time.fixedDeltaTime = 0.005f;
     }
 
@@ -486,57 +492,52 @@ public class GameManager : MonoBehaviour
         po_score.GetComponent<Text>().text = pField.Count.ToString();
         ka_stock_board.GetComponent<Text>().text = "남은 말 수: " + kStocks.ToString();
         po_stock_board.GetComponent<Text>().text = "남은 말 수: " + pStocks.ToString();
+        TurnCounter.GetComponent<Text>().text = turncount.ToString() + " 턴";
         // 승리하면 캐릭터 일러 띄우고 종료/반복
         if (turncount >= MAX_TURN || kField.Count >= width * height / 2 || pField.Count >= width * height / 2)
         {
             if (kField.Count > pField.Count) kWin = true;
             if (pField.Count > kField.Count) pWin = true;
-            if (kWin)
-            {
-                ka_character.SetActive(false);
-                po_character.SetActive(false);
-                ka_win.SetActive(true);
-                po_lose.SetActive(true);
-            } // k 에게 승리 메시지
-            if (pWin)
-            {
-                ka_character.SetActive(false);
-                po_character.SetActive(false);
-                ka_lose.SetActive(true);
-                po_win.SetActive(true);
-            } // p 에게 승리 메시지
-            networkManager.ServerSendGameOver();
-            networkManager.isActive = false;
+            isGameOver = true;
         }
         else if (kStocks < 1 || pStocks < 1)
         {
-            if (kStocks < 1)
+            bool is_ka_Alive = (kStocks >= 1);
+            foreach (GameObject unit in kUnits)
             {
-                bool is_ka_Alive = false;
-                foreach(GameObject unit in kUnits)
-                {
-                    is_ka_Alive = is_ka_Alive || unit.activeSelf;
-                }
-                kWin = is_ka_Alive;
+                is_ka_Alive = is_ka_Alive || unit.activeSelf;
             }
-            if (pStocks < 1)
+            bool is_po_Alive = (pStocks >= 1);
+            foreach (GameObject unit in pUnits)
             {
-                bool is_po_Alive = false;
-                foreach (GameObject unit in pUnits)
-                {
-                    is_po_Alive = is_po_Alive || unit.activeSelf;
-                }
-                pWin = is_po_Alive;
+                is_po_Alive = is_po_Alive || unit.activeSelf;
             }
-            if (kWin)
+            if (!(is_ka_Alive && is_po_Alive)) 
             {
+                pWin = true;
+                kWin = true;
+                if (!is_ka_Alive) kWin = false;
+                if (!is_po_Alive) pWin = false; 
+                isGameOver = true; 
+            }
+        }
+        if (isGameOver)
+        {
+            if (kWin && pWin || !kWin && !pWin)
+            {
+                TurnCounter.GetComponent<Text>().text = "무승부";
+            }
+            else if (kWin)
+            {
+                TurnCounter.GetComponent<Text>().text = "카이스트 승리!";
                 ka_character.SetActive(false);
                 po_character.SetActive(false);
                 ka_win.SetActive(true);
                 po_lose.SetActive(true);
             } // k 에게 승리 메시지
-            if (pWin)
+            else if (pWin)
             {
+                TurnCounter.GetComponent<Text>().text = "포스텍 승리!";
                 ka_character.SetActive(false);
                 po_character.SetActive(false);
                 ka_lose.SetActive(true);
@@ -614,9 +615,9 @@ public class GameManager : MonoBehaviour
         networkManager.ServerSendTurnover();
         InitializePos();
         networkManager.SendGameInfo(pUnits, kUnits, pArea, kArea, pStocks, kStocks);
-        while (true)
+        while (!isGameOver)
         {
-            networkManager.ServerSendTurnStart();
+            networkManager.ServerSendTurnStart(turncount);
             yield return new WaitForSecondsRealtime(TURN_TIME);
             networkManager.ServerSendTurnover();
             TurnActive = false;

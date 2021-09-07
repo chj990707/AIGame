@@ -388,9 +388,9 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    public void ServerSendTurnStart()
+    public void ServerSendTurnStart(int turnNum)
     {
-        ServerSendMessageAll("TurnStart");
+        ServerSendMessageAll("TurnStart$" + turnNum);
     }
 
     public void ServerSendTurnover()
