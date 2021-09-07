@@ -489,33 +489,46 @@ public class GameManager : MonoBehaviour
         // 승리하면 캐릭터 일러 띄우고 종료/반복
         if (turncount >= MAX_TURN || kField.Count >= width * height / 2 || pField.Count >= width * height / 2)
         {
+            if (kField.Count > pField.Count) kWin = true;
+            if (pField.Count > kField.Count) pWin = true;
+            if (kWin)
+            {
+                ka_character.SetActive(false);
+                po_character.SetActive(false);
+                ka_win.SetActive(true);
+                po_lose.SetActive(true);
+            } // k 에게 승리 메시지
+            if (pWin)
+            {
+                ka_character.SetActive(false);
+                po_character.SetActive(false);
+                ka_lose.SetActive(true);
+                po_win.SetActive(true);
+            } // p 에게 승리 메시지
+            networkManager.ServerSendGameOver();
+            networkManager.isActive = false;
+        }
+        else if (kStocks < 1 || pStocks < 1)
+        {
             if (kStocks < 1)
             {
-                pWin = true;
-                foreach (var item in kUnits)
+                bool is_ka_Alive = false;
+                foreach(GameObject unit in kUnits)
                 {
-                    if (!item.Equals(null))
-                    {
-                        pWin = false;
-                        break;
-                    }
+                    is_ka_Alive = is_ka_Alive || unit.activeSelf;
                 }
+                kWin = is_ka_Alive;
             }
             if (pStocks < 1)
             {
-                kWin = true;
-                foreach (var item in pUnits)
+                bool is_po_Alive = false;
+                foreach (GameObject unit in pUnits)
                 {
-                    if (!item.Equals(null))
-                    {
-                        kWin = false;
-                        break;
-                    }
+                    is_po_Alive = is_po_Alive || unit.activeSelf;
                 }
+                pWin = is_po_Alive;
             }
-            if (kField.Count >= pField.Count) kWin = true;
-            if (pField.Count >= kField.Count) pWin = true;
-            if (kWin) 
+            if (kWin)
             {
                 ka_character.SetActive(false);
                 po_character.SetActive(false);
