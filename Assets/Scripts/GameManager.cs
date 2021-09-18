@@ -560,26 +560,7 @@ public class GameManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.anyKeyDown && !pUnits[0].activeSelf)
-        {
-            pUnits[0].transform.position = new Vector3(0, 0, 0);
-            pUnits[0].SetActive(true);
-        }
-        var pos = pUnits[0].transform.position;
-        if (Input.GetKeyDown(KeyCode.UpArrow))
-            pUnits[0].transform.Translate(0, 1, 0);
-        if (Input.GetKeyDown(KeyCode.DownArrow))
-            pUnits[0].transform.Translate(0, -1, 0);
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-            pUnits[0].transform.Translate(-1, 0, 0);
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-            pUnits[0].transform.Translate(1, 0, 0);
-        if (Input.anyKeyDown && Physics.OverlapBox(pos, new Vector3(0.4f, 0.4f, 0.1f), Quaternion.identity).Length == 1)
-        {
-            GameObject ln = Instantiate(po_ln, pos, Quaternion.identity);
-            ln.GetComponent<Line>().owner = pUnits[0];
-            pUnits[0].GetComponent<Unit>().line.Add(ln);
-        }
+
     }
 
     private void FloodFill(int x, int y)
