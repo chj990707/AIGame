@@ -184,7 +184,9 @@ public class GameManager : MonoBehaviour
         {
             bool[] isKaCommanded = new bool[3] { false, false, false };
             bool[] isPoCommanded = new bool[3] { false, false, false };
-            while(CommandQueue.Count > 0)
+            bool[] isKaRespawned = new bool[3] { false, false, false };
+            bool[] isPoRespawned = new bool[3] { false, false, false };
+            while (CommandQueue.Count > 0)
             {
                 Command Cur_Com;
                 CommandQueue.TryDequeue(out Cur_Com);
@@ -293,6 +295,8 @@ public class GameManager : MonoBehaviour
                         if (!isinArea) break;
                         piece.transform.position = Cur_Com.pos;
                         piece.SetActive(true);
+                        if (Cur_Com.isPo) isPoRespawned[Cur_Com.pieceNum] = true;
+                        else isKaRespawned[Cur_Com.pieceNum] = true;
                         if (Cur_Com.isPo) pStocks--;
                         else kStocks--;
                         break;
@@ -313,7 +317,7 @@ public class GameManager : MonoBehaviour
             //말을 다음에 이동할 방향으로 이동
             for(int i = 0; i < 3; i++)
             {
-                if (kUnits[i].activeSelf)
+                if (kUnits[i].activeSelf && !isKaRespawned[i])    
                 {
                     var pos = kUnits[i].transform.position;
                     MoveUnit(false, kUnits[i]);
@@ -325,7 +329,7 @@ public class GameManager : MonoBehaviour
                         killList.Add(kUnits[i]);
                     }
                 }
-                if (pUnits[i].activeSelf)
+                if (pUnits[i].activeSelf && !isPoRespawned[i])
                 {
                     var pos = pUnits[i].transform.position;
                     MoveUnit(true, pUnits[i]);
